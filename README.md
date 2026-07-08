@@ -1,3 +1,10 @@
-# KAMBAN ACOPIO V0001 PWA OFFLINE
+# KAMBAN ACOPIO - PWA OFFLINE
 
-Subir todo a GitHub Pages. Abrir una vez con internet e instalar en Chrome.
+Versión: 0001.1
+
+Corrección:
+- Cuadro de pendientes responsive.
+- Evita que pendientes quede fijo/descuadrado en celular.
+- Clave administrador: 1234
+
+Subir todos los archivos y carpetas a GitHub.
