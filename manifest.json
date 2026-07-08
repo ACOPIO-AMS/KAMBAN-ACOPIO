@@ -1,0 +1,22 @@
+{
+  "name": "Kamban Circuito Acopio",
+  "short_name": "Kamban Acopio",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#001b2e",
+  "theme_color": "#001b2e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
