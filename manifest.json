@@ -1,0 +1,28 @@
+{
+  "name": "Kamban Circuito Acopio",
+  "short_name": "Kamban Acopio",
+  "id": "/KAMBAN-ACOPIO/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#001b2e",
+  "theme_color": "#001b2e",
+  "orientation": "portrait",
+  "description": "Registro QR offline versión 0001 para circuito de acopio.",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

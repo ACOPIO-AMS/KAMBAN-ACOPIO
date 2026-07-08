@@ -1,0 +1,1 @@
+function doGet(e){return ContentService.createTextOutput("KAMBAN OK");}function doPost(e){return ContentService.createTextOutput("OK");}
