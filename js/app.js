@@ -163,19 +163,29 @@ function registrar(){
   if(!codigo)return;
 
   if(!operador){
-    setEstado("Ingrese operador.");
-    $("operador").focus();
-    return;
-  }
+  setEstado("Ingrese operador.");
+
+  // Borra el código que se intentó registrar
+  $("codigo").value="";
+
+  // Lleva el cursor al campo operador
+  $("operador").focus();
+  return;
+}
 
   if(
-    ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(estacion) &&
-    !recurso
-  ){
-    setEstado("Seleccione "+$("recursoLabel").textContent+".");
-    $("recurso").focus();
-    return;
-  }
+  ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(estacion) &&
+  !recurso
+){
+  setEstado("Seleccione "+$("recursoLabel").textContent+".");
+
+  // Borra el código que intentó registrarse incorrectamente
+  $("codigo").value="";
+
+  // Envía el cursor al selector del equipo
+  $("recurso").focus();
+  return;
+}
 
   registrando=true;
   setEstado("");
@@ -340,8 +350,15 @@ function iniciar(){
   });
 
   $("recurso").addEventListener("change",()=>{
-    enfocarCodigo();
-  });
+  // Garantiza que el campo de escaneo quede vacío
+  $("codigo").value="";
+
+  // Limpia el mensaje de error anterior
+  setEstado("");
+
+  // Regresa el cursor al campo de escaneo
+  enfocarCodigo();
+});
 
   $("modoInicioBtn").onclick=()=>seleccionarModo("NORMAL");
   $("modoParadaBtn").onclick=()=>seleccionarModo("PARADA");
