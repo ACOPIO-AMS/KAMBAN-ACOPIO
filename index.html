@@ -2,9 +2,40 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kamban Acopio Registro de Datos</title><link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#001b2e"><meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="css/estilos.css?v=0002.7.2-campo"><link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/estilos.css?v=0002.7.3-campo"><link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+/* Estación y recurso/equipo en la misma fila */
+.estacionRecursoRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+}
+.estacionRecursoRow > div{
+  min-width:0;
+}
+.estacionRecursoRow select{
+  width:100%;
+  box-sizing:border-box;
+}
+#recursoBox.hide{
+  display:none !important;
+}
+@media (max-width:520px){
+  .estacionRecursoRow{
+    grid-template-columns:minmax(0,1fr) minmax(110px,.72fr);
+    gap:8px;
+  }
+  #recursoBox .note{
+    font-size:11px;
+    line-height:1.2;
+  }
+}
+</style>
+
 </head><body>
-<header><h1>KAMBAN CIRCUITO ACOPIO</h1><div>Registro QR ver. 0002.00 CRQ- offline</div></header>
+<header><h1>KAMBAN CIRCUITO ACOPIO</h1><div>Registro QR ver. 0002.7.3 CRQ- offline</div></header>
 <section class="topStats"><div><small>Red</small><b id="redEstado">...</b></div><div><small>Pend.</small><b id="pendientesSync">0</b></div><div><small>Último</small><b id="ultimoMin">--</b></div></section>
 <main><section class="card">
 <div class="estacionRecursoRow"><div><label>Estación</label><select id="estacion"><option>BALANZA</option><option>DESCARGUIO</option><option>CHANCADO</option><option>MUESTREO</option><option>SECADO</option><option>PULVERIZADO</option><option>CUARTEOSELLADO</option><option>ATENCION AL CLIENTE</option></select></div><div id="recursoBox" class="hide"><label id="recursoLabel">Recurso</label><select id="recurso"></select><div class="note">Seleccione en cada registro. El lote debe continuar en el mismo recurso.</div></div></div>
@@ -17,6 +48,32 @@
 <button class="fabTrack" id="seguimientoBtn">📊</button><button class="fabAdmin" id="adminBtn">⚙</button>
 <div class="modal hide" id="seguimientoModal"><div class="modalBox wide"><div class="modalTop"><h3>Seguimiento Kanban</h3><button id="cerrarSeguimientoBtn" class="closeBtn">Cerrar</button></div><div id="fuenteSeguimiento" class="note"></div><div class="kpiGrid" id="kpiSeguimiento"></div><div class="trackFilters"><select id="filtroEstado"><option value="TODOS">TODOS</option><option value="EN PROCESO">EN PROCESO</option><option value="EN PARADA">EN PARADA</option><option value="EN STOCK">EN STOCK</option><option value="DEMORA">DEMORA</option><option value="FINALIZADO">FINALIZADO</option></select><button id="actualizarSeguimientoBtn">ACTUALIZAR</button></div><div id="kanban" class="kanbanWrap"></div></div></div>
 <div class="modal hide" id="adminModal"><div class="modalBox"><div class="modalTop"><h3>Administrador</h3><button id="cerrarAdminBtn" class="closeBtn">Cerrar</button></div><div id="adminInfo" class="note"></div><button id="probarSyncBtn">PROBAR RED Y SINCRONIZACIÓN</button><button id="exportarBtn" class="warning">EXPORTAR RESPALDO CSV</button><button id="borrarAnterioresBtn" class="danger">BORRAR ANTERIORES FINALIZADOS</button><button id="borrarSeleccionadosBtn" class="info">BORRAR SELECCIONADOS</button><div id="seleccionBox" class="hide"><label><input type="checkbox" id="seleccionarTodos"> Seleccionar todos</label><div class="tableWrap" id="tablaSeleccion"></div><button id="confirmarSeleccionBtn" class="danger">CONFIRMAR BORRADO SELECCIONADOS</button></div></div></div>
-<script src="js/config.js?v=0002.7.2-campo"></script><script src="js/utilidades.js?v=0002.7.2-campo"></script><script src="js/db.js?v=0002.7.2-campo"></script><script src="js/reglas.js?v=0002.7.2-campo"></script><script src="js/sincronizacion.js?v=0002.7.2-campo"></script><script src="js/seguimiento.js?v=0002.7.2-campo"></script><script src="js/admin.js?v=0002.7.2-campo"></script><script src="js/app.js?v=0002.7.2-campo"></script>
-<script>window.addEventListener("online",()=>document.body.classList.remove("offline"));window.addEventListener("offline",()=>document.body.classList.add("offline"));if(!navigator.onLine)document.body.classList.add("offline");if("serviceWorker"in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"));}</script>
+<script src="js/config.js?v=0002.7.3-campo"></script><script src="js/utilidades.js?v=0002.7.3-campo"></script><script src="js/db.js?v=0002.7.3-campo"></script><script src="js/reglas.js?v=0002.7.3-campo"></script><script src="js/sincronizacion.js?v=0002.7.3-campo"></script><script src="js/seguimiento.js?v=0002.7.3-campo"></script><script src="js/admin.js?v=0002.7.3-campo"></script><script src="js/app.js?v=0002.7.3-campo"></script>
+<script>
+window.addEventListener("online",()=>document.body.classList.remove("offline"));
+window.addEventListener("offline",()=>document.body.classList.add("offline"));
+if(!navigator.onLine)document.body.classList.add("offline");
+
+if("serviceWorker" in navigator){
+  let recargando=false;
+
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(recargando) return;
+    recargando=true;
+    location.reload();
+  });
+
+  window.addEventListener("load",async()=>{
+    try{
+      const registro=await navigator.serviceWorker.register(
+        "./service-worker.js?v=0002.7.3",
+        {updateViaCache:"none"}
+      );
+      await registro.update();
+    }catch(error){
+      console.error("No se pudo actualizar la aplicación:",error);
+    }
+  });
+}
+</script>
 </body></html>
