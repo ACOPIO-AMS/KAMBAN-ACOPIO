@@ -17,6 +17,7 @@ const ASSETS = [
   './icons/icon-512.png'
 ];
 
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
