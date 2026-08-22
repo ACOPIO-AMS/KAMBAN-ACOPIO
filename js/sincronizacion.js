@@ -1,6 +1,25 @@
-/* KAMBAN ACOPIO 0002.7 - SINCRONIZACIÓN SEGURA */
+/* KANBAN 0002.8.5 - SINCRONIZACIÓN SEGURA Y LIGERA */
 let syncProcesando=false,syncTimerPeriodico=null,syncTimerReintento=null,syncBackendVerificadoEn=0;
 const syncEnCurso=new Set();
+let borradoSyncProcesando=false;
+
+function leerBorradosPendientes(){try{const d=JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY)||"[]");return Array.isArray(d)?d:[]}catch(e){return[]}}
+function guardarBorradosPendientes(d){localStorage.setItem(DELETE_QUEUE_KEY,JSON.stringify(d||[]))}
+async function procesarBorradosPendientes(){
+  if(borradoSyncProcesando||!navigator.onLine||!endpoint())return;
+  const lote=leerBorradosPendientes().slice(0,DELETE_SYNC_BATCH);
+  if(!lote.length)return;
+  borradoSyncProcesando=true;
+  try{
+    const pendientes=leerBorradosPendientes();
+    for(const x of lote){
+      try{
+        const r=await jsonpSeguro({action:"delete",id:x.id,estacion:x.estacion},5000);
+        if(r&&r.ok===true){const i=pendientes.findIndex(y=>y.id===x.id);if(i>=0){pendientes.splice(i,1);guardarBorradosPendientes(pendientes)}}
+      }catch(e){break}
+    }
+  }finally{borradoSyncProcesando=false}
+}
 
 function recursoPayload(r){
   const e=String(r.estacion||"").trim().toUpperCase();
@@ -9,6 +28,8 @@ function recursoPayload(r){
   if(!x&&e==="CHANCADO"&&r.circuito)x="C"+String(r.circuito).replace(/^C/i,"");
   if(!x&&e==="SECADO"&&r.horno)x="H"+String(r.horno).replace(/^H/i,"");
   if(!x&&e==="PULVERIZADO"&&r.molino)x="M"+String(r.molino).replace(/^M/i,"");
+  if(!x&&e==="BALANZA"&&(r.tipo_mineral||r.tipoMineral))x=String(r.tipo_mineral||r.tipoMineral).trim().toUpperCase();
+  if(!x&&e==="MUESTREO"&&r.ubicacion)x=String(r.ubicacion).trim().toUpperCase();
   return x;
 }
 
@@ -21,6 +42,7 @@ function crearPayload(r){
     operador:String(r.operador||"").trim(),
     estacion:String(r.estacion||"").trim().toUpperCase(),
     recurso:recursoPayload(r),
+    detalle:String(r.detalle||r.motivo_stock||"").trim().toUpperCase(),
     id:String(r.id||"").trim(),
     eliminado:r.eliminado===true?"true":"false",
     version:String(r.version||APP_VERSION)
@@ -31,7 +53,7 @@ function validarPayload(p){
   if(!p.id)throw new Error("Registro sin ID.");
   if(!p.codigo)throw new Error("Registro sin código.");
   if(!p.estacion)throw new Error("Registro sin estación.");
-  if(["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso){
+  if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso){
     throw new Error("Falta RECURSO en "+p.codigo+".");
   }
 }
@@ -151,14 +173,30 @@ function sincronizarRegistroInmediato(registro){setTimeout(()=>procesarPendiente
 function sincronizar(manual=false){return procesarPendientesSync(manual)}
 
 function cargarDrive(callback){
-  jsonpSeguro({action:"list"},30000)
-    .then(r=>{window.datosRemotos=r&&Array.isArray(r.data)?r.data:[];callback&&callback()})
-    .catch(e=>{console.error("Lectura Drive:",e);window.datosRemotos=null;callback&&callback()});
+  window.errorReporte="";
+  jsonpSeguro({action:"kanban"},30000)
+    .then(r=>{
+      if(!r||r.ok!==true)throw new Error(r&&r.error?r.error:"Apps Script no devolvió una respuesta válida.");
+      if(String(r.version||"")!==String(BACKEND_VERSION_ESPERADA)){
+        throw new Error("Backend sin actualizar. Encontrado: "+String(r.version||"sin versión")+" | Esperado: "+BACKEND_VERSION_ESPERADA);
+      }
+      window.datosRemotos=Array.isArray(r.data)?r.data:[];
+      window.metaReporte=r.meta||null;
+      callback&&callback();
+    })
+    .catch(e=>{
+      console.error("Lectura KANBAN:",e);
+      window.datosRemotos=[];
+      window.errorReporte=String(e&&e.message?e.message:e);
+      callback&&callback();
+    });
 }
 
-window.addEventListener("online",()=>{syncBackendVerificadoEn=0;setTimeout(()=>procesarPendientesSync(false),300)});
+window.addEventListener("online",()=>{syncBackendVerificadoEn=0;setTimeout(()=>procesarPendientesSync(false),300);setTimeout(()=>procesarBorradosPendientes(),600)});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine)setTimeout(()=>procesarPendientesSync(false),400)});
 document.addEventListener("DOMContentLoaded",()=>{
   setTimeout(()=>procesarPendientesSync(false),1000);
+  setTimeout(()=>procesarBorradosPendientes(),1500);
   syncTimerPeriodico=setInterval(()=>{if(navigator.onLine)procesarPendientesSync(false)},SYNC_PERIODIC_MS);
+  setInterval(()=>{if(navigator.onLine)procesarBorradosPendientes()},SYNC_PERIODIC_MS);
 });

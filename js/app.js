@@ -100,6 +100,54 @@ function configurarRecurso(){
   localStorage.removeItem("kamban_recurso_"+estacion);
 }
 
+function configurarCamposEspeciales(){
+  const estacion=$("estacion").value;
+  const mineralBox=$("tipoMineralBox");
+  const canchaBox=$("ubicacionMuestreoBox");
+  const stockBox=$("motivoStockBox");
+  mineralBox.classList.toggle("hide",estacion!=="BALANZA");
+  canchaBox.classList.toggle("hide",estacion!=="MUESTREO");
+  stockBox.classList.add("hide");
+  if(estacion!=="BALANZA")$("tipoMineral").value="";
+  if(estacion!=="BALANZA")$("estadoMineral").value="";
+  if(!permiteStock(estacion))$("motivoStock").value="";
+  if(estacion!=="MUESTREO"){ $("muestreoSector").value=""; configurarNumeracionMuestreo(); }
+}
+
+function configurarMotivoStock(){
+  const estacion=$("estacion").value;
+  const select=$("motivoStock");
+  if(estacion==="MUESTREO"){
+    select.innerHTML='<option value="">Seleccione</option><option value="EP">ESPERA PROVEEDOR (EP)</option><option value="MC">MUESTREO EN CONJUNTO (MC)</option>';
+  }else{
+    select.innerHTML='<option value="">Seleccione</option><option value="LOTE HUMEDO">LOTE HUMEDO</option><option value="ESPERA PROVEEDOR">ESPERA PROVEEDOR</option>';
+  }
+}
+
+function configurarNumeracionMuestreo(){
+  const sector=$("muestreoSector").value;
+  const numero=$("muestreoNumero");
+
+  if(sector==="PLANTA"){
+    numero.value="";
+    numero.classList.add("hide");
+    return;
+  }
+
+  numero.classList.remove("hide");
+  numero.disabled=false;
+  numero.innerHTML='<option value="">N°</option>'+Array.from({length:8},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
+  numero.value="";
+}
+
+function ubicacionMuestreoActual(){
+  const sector=$("muestreoSector").value;
+  if(!sector)return "";
+  if(sector==="PLANTA")return "PLANTA";
+  const numero=$("muestreoNumero").value;
+  return numero?`${numero} ${sector}`:"";
+}
+
 function recursoDetalle(r){
   if(r.recurso)return String(r.recurso);
   if(r.estacion==="DESCARGUIO"&&r.tolva)return"T"+r.tolva;
@@ -128,7 +176,8 @@ function actualizarModo(){
 
   $("modoParadaBtn").style.display=permiteParada(estacion)?"block":"none";
   $("modoStockBtn").style.display=permiteStock(estacion)?"block":"none";
-  $("modoSalidaStockBtn").style.display=permiteStock(estacion)?"block":"none";
+  $("modoSalidaStockBtn").style.display=estacion==="DESCARGUIO"?"block":"none";
+  $("motivoStockBox").classList.toggle("hide",!(permiteStock(estacion)&&modoEspecial==="EN STOCK"));
 
   [
     "modoInicioBtn",
@@ -152,38 +201,47 @@ function seleccionarModo(modo){
   enfocarCodigo();
 }
 
+function avisarNoRegistrado(mensaje,elemento){
+  const texto="NO SE REGISTRÓ EL EVENTO.\n\n"+mensaje;
+  setEstado(texto);
+  $("codigo").value="";
+  alert(texto);
+  if(elemento)elemento.focus();
+}
+
 function registrar(){
   if(registrando)return;
 
   const codigo=$("codigo").value.trim();
   const estacion=$("estacion").value;
   const operador=$("operador").value.trim();
-  const recurso=normalizarRecurso($("recurso").value);
+  const recursoEquipo=normalizarRecurso($("recurso").value);
+  const tipo=$("tipoMineral").value.trim().toUpperCase();
+  const estadoMineral=$("estadoMineral").value.trim().toUpperCase();
+  const tipoMineral=tipo&&estadoMineral?`${tipo} - ${estadoMineral}`:"";
+  const motivoStock=$("motivoStock").value.trim().toUpperCase();
+  const ubicacionElegida=ubicacionMuestreoActual();
+  let ubicacion=ubicacionElegida;
+  // BALANZA y MUESTREO también guardan su dato operativo en la columna RECURSO.
+  let recurso=estacion==="BALANZA"?tipoMineral:(estacion==="MUESTREO"?ubicacion:recursoEquipo);
 
   if(!codigo)return;
 
   if(!operador){
-  setEstado("Ingrese operador.");
-
-  // Borra el código que se intentó registrar
-  $("codigo").value="";
-
-  // Lleva el cursor al campo operador
-  $("operador").focus();
+  avisarNoRegistrado("Falta ingresar el operador.",$("operador"));
   return;
 }
 
+  if(estacion==="BALANZA"&&!tipoMineral){
+    avisarNoRegistrado("Seleccione el tipo y estado del mineral.",$("tipoMineral"));
+    return;
+  }
+
   if(
   ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(estacion) &&
-  !recurso
+  !recurso && !(estacion==="DESCARGUIO"&&modoEspecial!=="NORMAL")
 ){
-  setEstado("Seleccione "+$("recursoLabel").textContent+".");
-
-  // Borra el código que intentó registrarse incorrectamente
-  $("codigo").value="";
-
-  // Envía el cursor al selector del equipo
-  $("recurso").focus();
+  avisarNoRegistrado("Seleccione "+$("recursoLabel").textContent+".",$("recurso"));
   return;
 }
 
@@ -200,11 +258,46 @@ function registrar(){
     evento=modoEspecial;
   }
 
+  // En MUESTREO, con el modo INICIO se registra automáticamente SALIDA STOCK
+  // cuando el último evento del lote quedó EN STOCK.
+  if(estacion==="MUESTREO"&&modoEspecial==="NORMAL"){
+    evento=eventoAutomatico(codigo,estacion);
+  }
+
+  if(estacion==="MUESTREO"){
+    const ubicacionFijada=ubicacionMuestreoAsignada(codigo);
+    if(!ubicacionElegida&&!ubicacionFijada){
+      avisarNoRegistrado("Seleccione la ubicación de muestreo para la RECEPCIÓN.",$("muestreoSector").value?$("muestreoNumero"):$("muestreoSector"));
+      registrando=false;
+      return;
+    }
+    if(ubicacionElegida&&ubicacionFijada&&ubicacionElegida!==ubicacionFijada){
+      avisarNoRegistrado(`La ubicación debe ser ${ubicacionFijada}, igual que la RECEPCIÓN.`, $("muestreoSector"));
+      registrando=false;
+      return;
+    }
+    ubicacion=ubicacionFijada||ubicacionElegida;
+    recurso=ubicacion;
+  }
+
+  if(estacion==="DESCARGUIO"&&evento==="EN STOCK"&&!motivoStock){
+    avisarNoRegistrado("Seleccione el motivo de stock.",$("motivoStock"));
+    registrando=false;
+    return;
+  }
+  if(estacion==="MUESTREO"&&evento==="EN STOCK"&&!motivoStock){
+    avisarNoRegistrado("Seleccione el motivo de stock.",$("motivoStock"));
+    registrando=false;
+    return;
+  }
+
+  if(estacion==="MUESTREO"&&evento==="EN STOCK")recurso=`${ubicacion} STOCK ${motivoStock}`;
+  if(estacion==="MUESTREO"&&evento==="SALIDA STOCK")recurso=`${ubicacion} SALIDA STOCK`;
+
   const validacion=validarSecuencia(codigo,estacion,evento,recurso);
 
   if(!validacion.ok){
-    alert(validacion.msg);
-    $("codigo").value="";
+    avisarNoRegistrado(validacion.msg);
     if(validacion.recursoEsperado&&$("recurso")){
       $("recurso").value="";
       setEstado("Seleccione el recurso correcto: "+validacion.recursoEsperado);
@@ -225,6 +318,7 @@ function registrar(){
     operador,
     estacion,
     recurso,
+    detalle:permiteStock(estacion)&&evento==="EN STOCK"?motivoStock:"",
     sincronizado:false,
     eliminado:false,
     version:APP_VERSION
@@ -238,6 +332,9 @@ function registrar(){
     $("recurso").value="";
     localStorage.removeItem("kamban_recurso_"+estacion);
   }
+  if(estacion==="BALANZA"){ $("tipoMineral").value=""; $("estadoMineral").value=""; }
+  if(permiteStock(estacion))$("motivoStock").value="";
+  if(estacion==="MUESTREO"){ $("muestreoSector").value=""; configurarNumeracionMuestreo(); }
 
   beepOk();
 
@@ -320,6 +417,9 @@ function iniciar(){
   limpiarOperadorTurno();
   programarLimpiezaCambioTurno();
   configurarRecurso();
+  configurarNumeracionMuestreo();
+  configurarMotivoStock();
+  configurarCamposEspeciales();
   actualizarModo();
   render();
   enfocarCodigo();
@@ -345,9 +445,17 @@ function iniciar(){
   $("estacion").addEventListener("change",()=>{
     guardarPreferencias();
     configurarRecurso();
+    configurarCamposEspeciales();
+    configurarMotivoStock();
     actualizarModo();
     enfocarCodigo();
   });
+
+  $("tipoMineral").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); });
+  $("estadoMineral").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
+  $("motivoStock").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
+  $("muestreoSector").addEventListener("change",()=>{ configurarNumeracionMuestreo(); $("codigo").value=""; setEstado(""); });
+  $("muestreoNumero").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
 
   $("recurso").addEventListener("change",()=>{
   // Garantiza que el campo de escaneo quede vacío
@@ -392,6 +500,8 @@ function iniciar(){
 
   // Recupera pendientes existentes sin usar funciones inexistentes.
   setTimeout(()=>procesarPendientesSync(false),1000);
+  setTimeout(()=>limpiezaAutomaticaLocal(),2500);
+  setInterval(()=>limpiezaAutomaticaLocal(),60*60*1000);
 }
 
 document.addEventListener("DOMContentLoaded",iniciar);

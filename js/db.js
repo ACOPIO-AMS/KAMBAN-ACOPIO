@@ -8,6 +8,8 @@ function normalizarRegistroLocal(r){
   if(!recurso&&estacion==="CHANCADO"&&r.circuito)recurso="C"+String(r.circuito).replace(/^C/i,"");
   if(!recurso&&estacion==="SECADO"&&r.horno)recurso="H"+String(r.horno).replace(/^H/i,"");
   if(!recurso&&estacion==="PULVERIZADO"&&r.molino)recurso="M"+String(r.molino).replace(/^M/i,"");
+  if(!recurso&&estacion==="BALANZA"&&(r.tipo_mineral||r.tipoMineral))recurso=String(r.tipo_mineral||r.tipoMineral).trim().toUpperCase();
+  if(!recurso&&estacion==="CANCHA"&&r.ubicacion)recurso=String(r.ubicacion).trim().toUpperCase();
 
   return {
     ...r,
@@ -18,6 +20,9 @@ function normalizarRegistroLocal(r){
     operador:String(r.operador||"").trim(),
     estacion,
     recurso,
+    tipo_mineral:String(r.tipo_mineral||r.tipoMineral||"").trim().toUpperCase(),
+    ubicacion:String(r.ubicacion||"").trim().toUpperCase(),
+    detalle:String(r.detalle||r.motivo_stock||"").trim().toUpperCase(),
     sincronizado:r.sincronizado===true,
     sync_intentos:Number(r.sync_intentos||0),
     sync_ultimo_error:String(r.sync_ultimo_error||""),

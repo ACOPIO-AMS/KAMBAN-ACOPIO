@@ -1,7 +1,7 @@
 let modoEspecial="NORMAL";
 
 function permiteParada(est){return est==="CHANCADO"}
-function permiteStock(est){return est==="DESCARGUIO"}
+function permiteStock(est){return est==="DESCARGUIO"||est==="MUESTREO"}
 function reglasEstacion(est){return EVENTS_BY_STATION[est]||EVENTS_BY_STATION.DEFAULT}
 function estacionUsaRecurso(est){return ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(est)}
 
@@ -22,9 +22,25 @@ function recursoAsignadoProceso(codigo,estacion){
   return normalizarRecurso(recursoDetalle(regs[regs.length-1]));
 }
 
+function ubicacionMuestreoBase(recurso){
+  return normalizarRecurso(String(recurso||"")
+    .replace(/\s+SALIDA\s+STOCK\s*$/i,"")
+    .replace(/\s+STOCK\s+(EP|MC)\s*$/i,""));
+}
+
+function ubicacionMuestreoAsignada(codigo){
+  const regs=registrosPor(codigo,"MUESTREO");
+  const recepcion=regs.find(r=>String(r.evento||"").toUpperCase()==="RECEPCION");
+  return recepcion?ubicacionMuestreoBase(recursoDetalle(recepcion)):"";
+}
+
 function eventoAutomatico(codigo,estacion){
   const ultimo=ultimoEvento(codigo,estacion);
   if(estacion==="CHANCADO"&&ultimo==="PARADA")return"REINICIO";
+  // En MUESTREO, la salida de stock se registra desde el modo INICIO.
+  // Luego la siguiente lectura normal cierra directamente el proceso con FINAL.
+  if(estacion==="MUESTREO"&&ultimoEventoStock(codigo,estacion)==="EN STOCK")return"SALIDA STOCK";
+  if(estacion==="MUESTREO"&&ultimo==="SALIDA STOCK")return"FINAL";
   const reglas=reglasEstacion(estacion);
   const usados=registrosPor(codigo,estacion)
     .filter(r=>reglas.includes(String(r.evento||"").toUpperCase())).length;
@@ -36,7 +52,9 @@ function validarSecuencia(codigo,estacion,evento,recurso){
   const ultimo=ultimoEvento(codigo,estacion);
   const recursoActual=normalizarRecurso(recurso);
 
-  if(estacionUsaRecurso(estacion)){
+  // STOCK no depende del recurso donde se ejecutó el proceso anterior.
+  // En DESCARGUÍO puede registrarse sin seleccionar tolva.
+  if(estacionUsaRecurso(estacion)&&ev!=="EN STOCK"&&ev!=="SALIDA STOCK"){
     const asignado=recursoAsignadoProceso(codigo,estacion);
     if(asignado&&recursoActual!==asignado){
       return{
@@ -66,7 +84,25 @@ function validarSecuencia(codigo,estacion,evento,recurso){
     if(st==="EN STOCK"&&ev!=="SALIDA STOCK")return{ok:false,msg:"LOTE EN STOCK. Primero SALIDA STOCK."};
   }
 
-  if(ev==="FINAL"&&estacion!=="ATENCION AL CLIENTE"&&!tieneEvento(codigo,estacion,"INICIO"))
+  if(estacion==="MUESTREO"){
+    const st=ultimoEventoStock(codigo,estacion);
+    const yaRecepcion=tieneEvento(codigo,estacion,"RECEPCION");
+    const yaInicio=tieneEvento(codigo,estacion,"INICIO");
+    const ubicacionFijada=ubicacionMuestreoAsignada(codigo);
+    if(ubicacionFijada&&ubicacionMuestreoBase(recursoActual)!==ubicacionFijada)
+      return{ok:false,msg:`UBICACIÓN INCORRECTA.\n\nEl lote fue recibido en ${ubicacionFijada}. Debe mantenerse en esa misma ubicación.`};
+    if(ev==="EN STOCK"){
+      if(!yaRecepcion)return{ok:false,msg:"EN STOCK en MUESTREO solo se registra después de RECEPCIÓN."};
+      if(yaInicio)return{ok:false,msg:"EN STOCK en MUESTREO solo se registra antes del INICIO de proceso."};
+      if(st==="EN STOCK")return{ok:false,msg:"El lote ya está EN STOCK. Primero registre SALIDA STOCK."};
+    }
+    if(ev==="SALIDA STOCK"&&st!=="EN STOCK")return{ok:false,msg:"El lote no está EN STOCK en MUESTREO."};
+    if(st==="EN STOCK"&&ev!=="SALIDA STOCK")return{ok:false,msg:"LOTE EN STOCK. Primero registre SALIDA STOCK."};
+  }
+
+  const inicioValido=tieneEvento(codigo,estacion,"INICIO")||
+    (estacion==="MUESTREO"&&tieneEvento(codigo,estacion,"SALIDA STOCK"));
+  if(ev==="FINAL"&&estacion!=="ATENCION AL CLIENTE"&&!inicioValido)
     return{ok:false,msg:"No se puede registrar FINAL sin INICIO previo."};
 
   return{ok:true};

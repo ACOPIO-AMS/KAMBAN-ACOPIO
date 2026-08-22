@@ -53,5 +53,18 @@ th{background:#00324e;color:var(--verde);position:sticky;top:0;z-index:1;text-al
 .kanbanBoard{display:grid;grid-template-columns:repeat(8,minmax(145px,1fr));gap:6px;overflow:auto;padding-bottom:4px}.kanbanCol{background:#002e48;min-height:250px;border-radius:6px;padding:5px;border:1px solid var(--verde)}.kanbanHead{text-align:center;font-weight:900;padding:5px;color:var(--verde)}.loteCard{background:#074467;border-radius:5px;padding:7px;margin-bottom:5px;border-left:5px solid #89a7b7;box-shadow:0 2px 7px #0008}.loteOk{border-color:#00f58b}.loteParada{border-color:#ff5570}.loteStock{border-color:#ffd000}.loteDemora{border-color:#d76eff}.loteCode{font-weight:900;font-size:16px;color:#fff}.loteTime,.loteEvent{color:#dfff00;margin-top:2px;font-size:11px}
 .offline header{background:#3d0912}.offline #redEstado{color:#ff7180}
 @media(min-width:901px){.card:first-child{padding-bottom:6px}.estacionRecursoRow{grid-template-columns:1fr 1fr}.card:first-child .pendientesBox{max-height:220px}.card:nth-child(2){min-height:270px}}
-@media(max-width:900px){header h1{font-size:20px}.topStats{top:36px;padding-bottom:7px}.estacionRecursoRow{grid-template-columns:1fr}.scanInput{height:64px;font-size:24px}#pendientesTabla{max-height:210px}#tablaLocal{max-height:300px}.modoBtns{grid-template-columns:1fr 1fr}.card{margin-bottom:7px}}
+@media(max-width:900px){header h1{font-size:20px}.topStats{top:36px;padding-bottom:7px}.estacionRecursoRow{grid-template-columns:minmax(0,1fr) minmax(105px,.75fr)}.scanInput{height:64px;font-size:24px}#pendientesTabla{max-height:210px}#tablaLocal{max-height:300px}.modoBtns{grid-template-columns:1fr 1fr}.card{margin-bottom:7px}}
 @media(max-width:540px){header{padding:7px 5px}.topStats{top:39px}.topStats div{min-height:43px}.topStats b{font-size:13px}main{padding-left:3px;padding-right:3px}.card{padding:6px}.scanInput{height:68px;font-size:22px}.ultimoCodigo{font-size:27px}.kpiGrid{grid-template-columns:1fr 1fr}.trackFilters{grid-template-columns:1fr}.trackFilters button{width:100%}.modal{padding:3px}.modalBox{max-height:99vh}.fabTrack,.fabAdmin{width:46px;height:46px}.modoBtns button{min-height:42px;font-size:13px}input,select{min-height:39px;font-size:16px}table{font-size:10px}}
+
+.campoEspecial{margin-top:5px}.ubicacionMuestreoRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}.seleccionSticky{position:sticky;top:38px;z-index:5;background:#073e61;padding:6px 0;border-bottom:1px solid var(--verde)}.seleccionSticky label{display:flex;align-items:center;gap:6px}.seleccionSticky input[type="checkbox"]{width:auto;min-height:auto}.seleccionSticky button{margin-top:5px}#tablaSeleccion{max-height:58vh}
+
+/* V0002.8.2: selector de recurso junto a estación y ocultar N° cuando sector=PLANTA */
+.estacionRecursoRow .hide{display:none!important}
+.ubicacionMuestreoRow{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
+.ubicacionMuestreoRow select{min-width:0}
+
+/* Reporte directo desde hoja KANBAN - v0002.8.3 */
+.tablaKanbanReporte{width:100%;border-collapse:collapse;font-size:12px}
+.tablaKanbanReporte th{position:sticky;top:0;z-index:2;background:#0a3f69;padding:8px 6px;white-space:nowrap}
+.tablaKanbanReporte td{border:1px solid rgba(255,255,255,.18);padding:7px 6px;vertical-align:top;white-space:nowrap}
+.tablaKanbanReporte td:nth-child(n+3):nth-child(-n+10){white-space:normal;min-width:130px}

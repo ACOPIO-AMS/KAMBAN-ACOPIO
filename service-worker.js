@@ -1,22 +1,21 @@
-const CACHE = 'kamban-acopio-0002.7.3';
+const CACHE = 'kamban-acopio-0002.8.9';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.7.3-campo',
-  './js/config.js?v=0002.7.3-campo',
-  './js/utilidades.js?v=0002.7.3-campo',
-  './js/db.js?v=0002.7.3-campo',
-  './js/reglas.js?v=0002.7.3-campo',
-  './js/sincronizacion.js?v=0002.7.3-campo',
-  './js/seguimiento.js?v=0002.7.3-campo',
-  './js/admin.js?v=0002.7.3-campo',
-  './js/app.js?v=0002.7.3-campo',
+  './css/estilos.css?v=0002.8.7-campo',
+  './js/config.js?v=0002.8.7-campo',
+  './js/utilidades.js?v=0002.8.7-campo',
+  './js/db.js?v=0002.8.7-campo',
+  './js/reglas.js?v=0002.8.7-campo',
+  './js/sincronizacion.js?v=0002.8.7-campo',
+  './js/seguimiento.js?v=0002.8.7-campo',
+  './js/admin.js?v=0002.8.7-campo',
+  './js/app.js?v=0002.8.7-campo',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
-
 
 self.addEventListener('install', event => {
   event.waitUntil(

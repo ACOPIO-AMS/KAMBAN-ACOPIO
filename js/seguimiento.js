@@ -1,1 +1,73 @@
-window.datosRemotos=null;function construirSeguimiento(){const src=(Array.isArray(window.datosRemotos)&&window.datosRemotos.length)?window.datosRemotos:datos();const grupos={};src.filter(r=>!r.eliminado).forEach(r=>{if(!r.codigo||!r.estacion)return;const key=r.estacion+"||"+r.codigo;if(!grupos[key])grupos[key]=[];grupos[key].push(r)});const out=[];Object.values(grupos).forEach(regs=>{regs.sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora)));const first=regs[0],last=[...regs].reverse().find(r=>r.evento)||regs[regs.length-1];const eventos={};regs.forEach(r=>{if(r.evento)eventos[String(r.evento).toUpperCase()]=true});const ev=String(last.evento||"SIN EVENTO").toUpperCase();let estado="EN PROCESO";if(ev==="PARADA")estado="EN PARADA";else if(ev==="EN STOCK")estado="EN STOCK";else if(eventos.FINAL&&ev!=="EN STOCK")estado="FINALIZADO";const fin=regs.find(r=>String(r.evento).toUpperCase()==="FINAL");const min=minutosEntre(first.fecha_hora,fin?fin.fecha_hora:null);if(estado==="EN PROCESO"&&min>(UMBRALES_MINUTOS[first.estacion]||60))estado="DEMORA";out.push({codigo:first.codigo,estacion:first.estacion,ultimoEvento:ev,estado,minutos:min,ultimo:last.fecha_hora})});return out.sort((a,b)=>String(b.ultimo).localeCompare(String(a.ultimo)))}function abrirSeguimiento(){$("seguimientoModal").classList.remove("hide");renderSeguimiento();if(navigator.onLine)cargarDrive(renderSeguimiento)}function cerrarSeguimiento(){$("seguimientoModal").classList.add("hide");enfocarCodigo()}function renderSeguimiento(){const data=construirSeguimiento();$("fuenteSeguimiento").textContent=(Array.isArray(window.datosRemotos)&&window.datosRemotos.length)?"Fuente: Google Sheets / Drive":"Fuente: base local";const base=data.filter(x=>x.estado!=="FINALIZADO"||esHoy(x.ultimo));const filtro=$("filtroEstado").value;const filtrado=filtro==="TODOS"?base:base.filter(x=>x.estado===filtro);$("kpiSeguimiento").innerHTML=`<div class='kpiCard'><small>Visible</small><b>${base.length}</b></div><div class='kpiCard'><small>Proceso</small><b>${base.filter(x=>x.estado==="EN PROCESO"||x.estado==="DEMORA").length}</b></div><div class='kpiCard'><small>Parada</small><b>${base.filter(x=>x.estado==="EN PARADA").length}</b></div><div class='kpiCard'><small>Stock</small><b>${base.filter(x=>x.estado==="EN STOCK").length}</b></div>`;const nombres={"BALANZA":"BALANZA","DESCARGUIO":"DESCARGUÍO","CHANCADO":"CHANCADO","MUESTREO":"MUESTREO","SECADO":"SECADO","PULVERIZADO":"PULVERIZADO","CUARTEOSELLADO":"CUARTEO<br>SELLADO","ATENCION AL CLIENTE":"ATENCIÓN<br>CLIENTE"};let html="<div class='kanbanBoard'>";STATIONS.forEach(st=>{html+=`<div class='kanbanCol'><div class='kanbanHead'>${nombres[st]||st}</div>`;filtrado.filter(x=>x.estacion===st).sort((a,b)=>{if(a.estado==="FINALIZADO"&&b.estado!=="FINALIZADO")return 1;if(a.estado!=="FINALIZADO"&&b.estado==="FINALIZADO")return-1;return String(b.ultimo).localeCompare(String(a.ultimo))}).forEach(x=>{let cls="loteProceso";if(x.estado==="EN PARADA")cls="loteParada";else if(x.estado==="EN STOCK")cls="loteStock";else if(x.estado==="DEMORA")cls="loteDemora";else if(x.estado==="FINALIZADO")cls="loteOk";html+=`<div class='loteCard ${cls}'><div class='loteCode'>${x.codigo}</div><div class='loteTime'>${horaCorta(x.ultimo)}</div><div class='loteEvent'>${x.ultimoEvento}</div></div>`});html+="</div>"});html+="</div>";$("kanban").innerHTML=html}
+window.datosRemotos=null;
+
+function normalizarFilaKanban(r){
+  return {
+    fecha:String(r.fecha||""),
+    codigo:String(r.codigo||""),
+    balanza:String(r.balanza||""),
+    descarguio:String(r.descarguio||r.descarguío||""),
+    chancado:String(r.chancado||""),
+    muestreo:String(r.muestreo||""),
+    secado:String(r.secado||""),
+    pulverizado:String(r.pulverizado||""),
+    cuarteo:String(r.cuarteo_sellado||r.cuarteo||""),
+    atencion:String(r.atencion_al_cliente||r.atencion||""),
+    lead:String(r.lead_time||r.lead||""),
+    estado:String(r.estado||"").toUpperCase()
+  };
+}
+
+function abrirSeguimiento(){
+  $("seguimientoModal").classList.remove("hide");
+  renderSeguimiento();
+  if(navigator.onLine)cargarDrive(renderSeguimiento);
+}
+
+function cerrarSeguimiento(){
+  $("seguimientoModal").classList.add("hide");
+  enfocarCodigo();
+}
+
+function renderSeguimiento(){
+  const remoto=Array.isArray(window.datosRemotos)?window.datosRemotos:[];
+  const data=remoto.map(normalizarFilaKanban);
+  const meta=window.metaReporte||{};
+  $("fuenteSeguimiento").textContent=window.errorReporte
+    ?("ERROR: "+window.errorReporte)
+    :(remoto.length
+      ?("Fuente: hoja KANBAN | "+remoto.length+" filas | Encabezado fila "+String(meta.fila_encabezado||"?"))
+      :"La hoja KANBAN respondió, pero no se encontraron filas con CÓDIGO.");
+
+  const filtro=$("filtroEstado").value;
+  const filtrado=filtro==="TODOS"?data:data.filter(x=>x.estado===filtro);
+
+  $("kpiSeguimiento").innerHTML=
+    `<div class='kpiCard'><small>Total</small><b>${data.length}</b></div>`+
+    `<div class='kpiCard'><small>En proceso</small><b>${data.filter(x=>x.estado==="EN PROCESO").length}</b></div>`+
+    `<div class='kpiCard'><small>Finalizado</small><b>${data.filter(x=>x.estado==="FINALIZADO").length}</b></div>`+
+    `<div class='kpiCard'><small>Otros</small><b>${data.filter(x=>x.estado!=="EN PROCESO"&&x.estado!=="FINALIZADO").length}</b></div>`;
+
+  let html="<div class='tableWrap'><table class='tablaKanbanReporte'><thead><tr>"+
+    "<th>FECHA</th><th>CÓDIGO</th><th>BALANZA</th><th>DESCARGUÍO</th><th>CHANCADO</th><th>MUESTREO</th><th>SECADO</th><th>PULVERIZADO</th>"+
+    "<th>CUARTEO SELLADO</th><th>ATENCIÓN AL CLIENTE</th><th>LEAD TIME</th><th>ESTADO</th>"+
+    "</tr></thead><tbody>";
+
+  filtrado.forEach(x=>{
+    html+=`<tr>
+      <td>${esc(x.fecha)}</td>
+      <td><b>${esc(x.codigo)}</b></td>
+      <td>${esc(x.balanza).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.descarguio).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.chancado).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.muestreo).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.secado).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.pulverizado).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.cuarteo).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.atencion).replace(/\n/g,"<br>")}</td>
+      <td>${esc(x.lead).replace(/\n/g,"<br>")}</td>
+      <td><b>${esc(x.estado)}</b></td>
+    </tr>`;
+  });
+  html+="</tbody></table></div>";
+  $("kanban").innerHTML=html;
+}
