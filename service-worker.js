@@ -1,4 +1,4 @@
-const CACHE = 'kamban-acopio-0002.8.9';
+const CACHE = 'kamban-acopio-0002.8.9-batch1';
 
 const ASSETS = [
   './',
@@ -9,7 +9,7 @@ const ASSETS = [
   './js/utilidades.js?v=0002.8.7-campo',
   './js/db.js?v=0002.8.7-campo',
   './js/reglas.js?v=0002.8.7-campo',
-  './js/sincronizacion.js?v=0002.8.7-campo',
+  './js/sincronizacion.js?v=0002.8.9-batch1',
   './js/seguimiento.js?v=0002.8.7-campo',
   './js/admin.js?v=0002.8.7-campo',
   './js/app.js?v=0002.8.7-campo',
