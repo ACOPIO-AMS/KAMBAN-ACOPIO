@@ -64,7 +64,7 @@
 <button class="fabTrack" id="seguimientoBtn" title="Reportes">📊</button><button class="fabAdmin" id="adminBtn">⚙</button>
 <div class="modal hide" id="seguimientoModal"><div class="modalBox wide"><div class="modalTop"><h3>REPORTES KANBAN</h3><button id="cerrarSeguimientoBtn" class="closeBtn">Cerrar</button></div><div id="fuenteSeguimiento" class="note"></div><div class="kpiGrid" id="kpiSeguimiento"></div><div class="trackFilters"><select id="filtroEstado"><option value="TODOS">TODOS</option><option value="EN PROCESO">EN PROCESO</option><option value="EN PARADA">EN PARADA</option><option value="EN STOCK">EN STOCK</option><option value="DEMORA">DEMORA</option><option value="FINALIZADO">FINALIZADO</option></select><button id="actualizarSeguimientoBtn">ACTUALIZAR</button></div><div id="kanban" class="kanbanWrap"></div></div></div>
 <div class="modal hide" id="adminModal"><div class="modalBox"><div class="modalTop"><h3>Administrador</h3><button id="cerrarAdminBtn" class="closeBtn">Cerrar</button></div><div id="adminInfo" class="note"></div><button id="probarSyncBtn">PROBAR RED Y SINCRONIZACIÓN</button><button id="exportarBtn" class="warning">EXPORTAR RESPALDO CSV</button><button id="borrarAnterioresBtn" class="danger">BORRAR ANTERIORES FINALIZADOS</button><button id="borrarSeleccionadosBtn" class="info">BORRAR SELECCIONADOS</button><div class="note">Limpieza automática: finalizados sincronizados con más de 20 días, máximo 50 por ejecución.</div><div id="seleccionBox" class="hide"><div class="seleccionSticky"><label><input type="checkbox" id="seleccionarTodos"> Seleccionar todos</label><button id="confirmarSeleccionBtn" class="danger">CONFIRMAR BORRADO SELECCIONADOS</button></div><div class="tableWrap" id="tablaSeleccion"></div></div></div></div>
-<script src="js/config.js?v=0002.8.8-campo"></script><script src="js/utilidades.js?v=0002.8.8-campo"></script><script src="js/db.js?v=0002.8.8-campo"></script><script src="js/reglas.js?v=0002.8.8-campo"></script><script src="js/sincronizacion.js?v=0002.8.8-campo"></script><script src="js/seguimiento.js?v=0002.8.8-campo"></script><script src="js/admin.js?v=0002.8.8-campo"></script><script src="js/app.js?v=0002.8.8-campo"></script>
+<script src="js/config.js?v=0002.8.9-timeout60"></script><script src="js/utilidades.js?v=0002.8.8-campo"></script><script src="js/db.js?v=0002.8.8-campo"></script><script src="js/reglas.js?v=0002.8.8-campo"></script><script src="js/sincronizacion.js?v=0002.8.9-batch1"></script><script src="js/seguimiento.js?v=0002.8.8-campo"></script><script src="js/admin.js?v=0002.8.8-campo"></script><script src="js/app.js?v=0002.8.8-campo"></script>
 <script>
 window.addEventListener("online",()=>document.body.classList.remove("offline"));
 window.addEventListener("offline",()=>document.body.classList.add("offline"));
@@ -82,7 +82,7 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
       const registro=await navigator.serviceWorker.register(
-        "./service-worker.js?v=0002.8.9",
+        "./service-worker.js?v=0002.8.9-batch2",
         {updateViaCache:"none"}
       );
       await registro.update();
