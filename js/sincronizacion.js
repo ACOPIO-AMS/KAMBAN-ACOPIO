@@ -2,6 +2,12 @@
 let syncProcesando=false,syncTimerPeriodico=null,syncTimerReintento=null,syncBackendVerificadoEn=0;
 const syncEnCurso=new Set();
 let borradoSyncProcesando=false;
+let dispositivoUltimoReporte=0,dispositivoReporteEnCurso=false;
+
+function dispositivoId(){let id=localStorage.getItem(DEVICE_ID_KEY);if(!id){id="DISP-"+uid()+"-"+Math.random().toString(36).slice(2,7);localStorage.setItem(DEVICE_ID_KEY,id)}return id}
+function nombreDispositivo(){return String(localStorage.getItem(DEVICE_NAME_KEY)||"EQUIPO SIN NOMBRE").trim()}
+function areaDispositivo(){return String($("estacion")&&$("estacion").value||"").trim().toUpperCase()}
+async function reportarEstadoDispositivo(forzar=false){const ahora=Date.now();if(dispositivoReporteEnCurso||!navigator.onLine||!endpoint()||(!forzar&&(ahora-dispositivoUltimoReporte)<DEVICE_HEARTBEAT_MS))return;dispositivoReporteEnCurso=true;try{const pendientes=pendientesSyncOrdenados(),ultimoError=pendientes.map(r=>r.sync_ultimo_error||"").find(Boolean)||"";const r=await jsonpSeguro({action:"heartbeat",dispositivo_id:dispositivoId(),equipo:nombreDispositivo(),area:areaDispositivo(),frontend_version:APP_VERSION,pendientes:pendientes.length,ultimo_error:ultimoError,ultima_sync:localStorage.getItem(LAST_SYNC_KEY)||"",estado:navigator.onLine?"ONLINE":"OFFLINE"},8000);if(r&&r.ok===true)dispositivoUltimoReporte=Date.now()}catch(e){console.warn("Estado de dispositivo:",e)}finally{dispositivoReporteEnCurso=false}}
 
 function leerBorradosPendientes(){try{const d=JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY)||"[]");return Array.isArray(d)?d:[]}catch(e){return[]}}
 function guardarBorradosPendientes(d){localStorage.setItem(DELETE_QUEUE_KEY,JSON.stringify(d||[]))}
@@ -53,10 +59,9 @@ function validarPayload(p){
   if(!p.id)throw new Error("Registro sin ID.");
   if(!p.codigo)throw new Error("Registro sin código.");
   if(!p.estacion)throw new Error("Registro sin estación.");
-  // EN STOCK y SALIDA STOCK de DESCARGUIO no tienen tolva por configuración.
-  // Se permiten para que un registro observado no detenga toda la cola.
-  const descarguioSinTolva=p.estacion==="DESCARGUIO"&&["EN STOCK","SALIDA STOCK"].includes(p.evento);
-  if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso&&!descarguioSinTolva){
+  // Descarguío en stock no tiene tolva por diseño; no debe bloquear la cola local.
+  const descarguioStock=p.estacion==="DESCARGUIO"&&["EN STOCK","SALIDA STOCK"].includes(p.evento);
+  if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso&&!descarguioStock){
     throw new Error("Falta RECURSO en "+p.codigo+".");
   }
 }
@@ -108,6 +113,13 @@ async function enviarYConfirmar(registro){
   return p;
 }
 
+function codificarLote(payloads){return btoa(unescape(encodeURIComponent(JSON.stringify(payloads)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+async function enviarLote(payloads){
+  const r=await jsonpSeguro({action:"save_batch",lote:codificarLote(payloads)},SYNC_REQUEST_TIMEOUT_MS);
+  if(!r||r.ok!==true)throw new Error(r&&r.error?r.error:"Apps Script rechazó el lote.");
+  return Array.isArray(r.data)?r.data:[];
+}
+
 function esperaReintento(n){
   return Math.min(SYNC_RETRY_MAX_MS,SYNC_RETRY_BASE_MS*Math.pow(2,Math.min(Math.max(n-1,0),4)));
 }
@@ -124,39 +136,54 @@ async function procesarPendientesSync(manual=false){
   if(!navigator.onLine){if(manual)alert("Sin conexión. Los registros quedan guardados localmente.");return}
 
   syncProcesando=true;
-  let enviados=0,ultimoError="";
+  let enviados=0,observados=0,ultimoError="";
 
   try{
-    // En modo automático se envía directamente: evita una llamada ping adicional.
-    // La verificación de versión se mantiene para la prueba manual del administrador.
-    if(manual)await verificarBackend(true);
+    // Antes de enviar se verifica la versión una sola vez cada cinco minutos.
+    // Evita que una app nueva marque registros como observados contra un backend antiguo.
+    await verificarBackend(manual);
 
     while(navigator.onLine){
-      const pendiente=pendientesSyncOrdenados().find(r=>!syncEnCurso.has(String(r.id)));
-      if(!pendiente)break;
-      const id=String(pendiente.id);
-      syncEnCurso.add(id);
+      const candidatos=pendientesSyncOrdenados()
+        .filter(r=>!syncEnCurso.has(String(r.id))&&!r.sync_bloqueado)
+        .slice(0,SYNC_BATCH_SIZE);
+      if(!candidatos.length)break;
 
+      const payloads=[];
+      for(const registro of candidatos){
+        try{const p=crearPayload(registro);validarPayload(p);payloads.push(p)}
+        catch(error){
+          const msg=String(error&&error.message?error.message:error);
+          actualizarRegistro(String(registro.id),{sincronizado:false,sync_bloqueado:true,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
+          ultimoError=msg;observados++;
+        }
+      }
+      if(!payloads.length){render();continue;}
+      payloads.forEach(p=>syncEnCurso.add(String(p.id)));
       try{
-        const p=await enviarYConfirmar(pendiente);
-        actualizarRegistro(id,{sincronizado:true,recurso:p.recurso,sync_ultimo_error:"",sync_ultima_fecha:fechaHoraLocal()});
-        enviados++;
-        localStorage.setItem(LAST_SYNC_KEY,fechaHoraLocal());
-        render();
+        const respuesta=await enviarLote(payloads);
+        const porId=new Map(respuesta.map(x=>[String(x.id||""),x]));
+        payloads.forEach(p=>{
+          const x=porId.get(String(p.id));
+          if(x&&x.ok===true){
+            actualizarRegistro(String(p.id),{sincronizado:true,sync_bloqueado:false,recurso:String(x.recurso||p.recurso||"").toUpperCase(),sync_ultimo_error:"",sync_ultima_fecha:fechaHoraLocal()});
+            enviados++;
+          }else{
+            const msg=String(x&&x.error||"El servidor no confirmó el registro.");
+            actualizarRegistro(String(p.id),{sincronizado:false,sync_bloqueado:true,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
+            ultimoError=msg;observados++;
+          }
+        });
+        if(enviados)localStorage.setItem(LAST_SYNC_KEY,fechaHoraLocal());
       }catch(error){
         const msg=String(error&&error.message?error.message:error);
-        const actual=obtenerRegistro(id);
-        const intentos=Number(actual&&actual.sync_intentos||0)+1;
-        actualizarRegistro(id,{sincronizado:false,sync_intentos:intentos,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
+        payloads.forEach(p=>{const a=obtenerRegistro(String(p.id));actualizarRegistro(String(p.id),{sincronizado:false,sync_intentos:Number(a&&a.sync_intentos||0)+1,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()})});
         ultimoError=msg;
-        render();
-        programarReintentoGlobal(esperaReintento(intentos));
+        programarReintentoGlobal(SYNC_RETRY_BASE_MS);
         break;
-      }finally{
-        syncEnCurso.delete(id);
-      }
-
-      await new Promise(r=>setTimeout(r,120));
+      }finally{payloads.forEach(p=>syncEnCurso.delete(String(p.id)))}
+      render();
+      await new Promise(r=>setTimeout(r,80));
     }
   }catch(error){
     ultimoError=String(error&&error.message?error.message:error);
@@ -168,7 +195,7 @@ async function procesarPendientesSync(manual=false){
 
   if(manual){
     const faltan=pendientesSyncOrdenados().length;
-    alert(ultimoError?("No se completó la sincronización.\n\n"+ultimoError+"\n\nPendientes: "+faltan):("Sincronizados: "+enviados+"\nPendientes: "+faltan));
+    alert((ultimoError?"Sincronización con observaciones.\n\n"+ultimoError+"\n\n":"")+"Sincronizados: "+enviados+"\nObservados: "+observados+"\nPendientes: "+faltan);
   }
 }
 
@@ -195,11 +222,13 @@ function cargarDrive(callback){
     });
 }
 
-window.addEventListener("online",()=>{syncBackendVerificadoEn=0;setTimeout(()=>procesarPendientesSync(false),300);setTimeout(()=>procesarBorradosPendientes(),600)});
+window.addEventListener("online",()=>{syncBackendVerificadoEn=0;setTimeout(()=>procesarPendientesSync(false),300);setTimeout(()=>procesarBorradosPendientes(),600);setTimeout(()=>reportarEstadoDispositivo(true),900)});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine)setTimeout(()=>procesarPendientesSync(false),400)});
 document.addEventListener("DOMContentLoaded",()=>{
   setTimeout(()=>procesarPendientesSync(false),1000);
   setTimeout(()=>procesarBorradosPendientes(),1500);
+  setTimeout(()=>reportarEstadoDispositivo(true),1800);
   syncTimerPeriodico=setInterval(()=>{if(navigator.onLine)procesarPendientesSync(false)},SYNC_PERIODIC_MS);
   setInterval(()=>{if(navigator.onLine)procesarBorradosPendientes()},SYNC_PERIODIC_MS);
+  setInterval(()=>{if(navigator.onLine)reportarEstadoDispositivo(false)},DEVICE_HEARTBEAT_MS);
 });

@@ -482,6 +482,8 @@ function iniciar(){
   $("adminBtn").onclick=abrirAdmin;
   $("cerrarAdminBtn").onclick=cerrarAdmin;
   $("probarSyncBtn").onclick=()=>sincronizar(true);
+  $("configurarEquipoBtn").onclick=configurarEquipoActual;
+  $("actualizarControlBtn").onclick=actualizarControlDispositivos;
   $("exportarBtn").onclick=exportarCSV;
   $("borrarAnterioresBtn").onclick=borrarAnterioresFinalizados;
   $("borrarSeleccionadosBtn").onclick=mostrarBorradoSeleccionados;

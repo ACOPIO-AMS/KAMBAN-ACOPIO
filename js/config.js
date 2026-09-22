@@ -1,4 +1,4 @@
-const APP_VERSION="0002.8.9";
+const APP_VERSION="0002.9.0";
 const DB_KEY="kamban_acopio_db_v0001";
 const DB_BACKUP_KEY="kamban_acopio_db_respaldo_v0001";
 const LAST_SYNC_KEY="kamban_ultima_sync_v0001";
@@ -6,7 +6,10 @@ const LAST_TURN_CLEAR_KEY="kamban_turno_v0001";
 const ADMIN_PIN="1234";
 const AUTO_REGISTER_DELAY_MS=550;
 const ENDPOINT_FIJO="https://script.google.com/macros/s/AKfycbxSU5AteIl0u7FoOCeLNssQEVWvEvNssTGwkKZ4-vDSHUKeV64HXJdIH0NKs2u_HdQ/exec";
-const BACKEND_VERSION_ESPERADA="0002.8.9";
+const BACKEND_VERSION_ESPERADA="0002.9.0";
+const DEVICE_ID_KEY="kamban_dispositivo_id_v0001";
+const DEVICE_NAME_KEY="kamban_dispositivo_nombre_v0001";
+const DEVICE_HEARTBEAT_MS=60000;
 
 const STATIONS=[
   "BALANZA","DESCARGUIO","CHANCADO","MUESTREO",
@@ -29,9 +32,10 @@ const UMBRALES_MINUTOS={
 
 
 
-const SYNC_REQUEST_TIMEOUT_MS=20000;
-const SYNC_RETRY_BASE_MS=2000;
+const SYNC_REQUEST_TIMEOUT_MS=25000;
+const SYNC_RETRY_BASE_MS=5000;
 const SYNC_RETRY_MAX_MS=30000;
+const SYNC_BATCH_SIZE=5;
 // Con señal baja no se generan reintentos continuos: cada registro se envía al instante
 // y la cola pendiente se revisa cada minuto o apenas regresa la conexión.
 const SYNC_PERIODIC_MS=60000;
