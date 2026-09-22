@@ -1,5 +1,5 @@
 /**
- * KANBAN BACKEND 0002.8.9
+ * KANBAN BACKEND 0002.9.0 - SINCRONIZACIÓN LIGERA POR LOTES
  * A CODIGO | B EVENTO | C FECHA Y HORA | D OPERARIO
  * E ESTACION | F RECURSO | G ID REGISTRO
  * BALANZA: RECURSO = tipo de mineral.
@@ -126,4 +126,4 @@ function kaTexto(v){return String(v===null||v===undefined?"":v).trim()}
 function kaEstacion(v){return kaTexto(v).toUpperCase().replace(/[ÁÀÄÂ]/g,"A").replace(/[ÉÈËÊ]/g,"E").replace(/[ÍÌÏÎ]/g,"I").replace(/[ÓÒÖÔ]/g,"O").replace(/[ÚÙÜÛ]/g,"U").replace(/Ñ/g,"N")}
 function kaError(e){return String(e&&e.message?e.message:e)}
 function kaSalida(o,cb){var j=JSON.stringify(o);if(cb&&/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(cb))return ContentService.createTextOutput(cb+"("+j+");").setMimeType(ContentService.MimeType.JAVASCRIPT);return ContentService.createTextOutput(j).setMimeType(ContentService.MimeType.JSON);}
-function PRUEBA_PING_0002_8_3(){return{ok:true,version:KA_VERSION}}
+function PRUEBA_PING_0002_9_0(){return{ok:true,version:KA_VERSION}}
