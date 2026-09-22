@@ -1,18 +1,18 @@
-const CACHE = 'kamban-acopio-0002.8.9-batch2';
+const CACHE = 'kamban-acopio-0002.8.9-stockfix';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.8.7-campo',
-  './js/config.js?v=0002.8.9-timeout60',
-  './js/utilidades.js?v=0002.8.7-campo',
-  './js/db.js?v=0002.8.7-campo',
-  './js/reglas.js?v=0002.8.7-campo',
-  './js/sincronizacion.js?v=0002.8.9-batch1',
-  './js/seguimiento.js?v=0002.8.7-campo',
-  './js/admin.js?v=0002.8.7-campo',
-  './js/app.js?v=0002.8.7-campo',
+  './css/estilos.css?v=0002.8.9-stockfix',
+  './js/config.js?v=0002.8.9-stockfix',
+  './js/utilidades.js?v=0002.8.9-stockfix',
+  './js/db.js?v=0002.8.9-stockfix',
+  './js/reglas.js?v=0002.8.9-stockfix',
+  './js/sincronizacion.js?v=0002.8.9-stockfix',
+  './js/seguimiento.js?v=0002.8.9-stockfix',
+  './js/admin.js?v=0002.8.9-stockfix',
+  './js/app.js?v=0002.8.9-stockfix',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
