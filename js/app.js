@@ -1,4 +1,4 @@
-let registrando=false,timerAuto=null,timerCambioTurno=null,primeraTeclaCodigo=0,ultimaTeclaCodigo=0,codigoBloqueado=false;
+let registrando=false,timerCambioTurno=null,codigoBloqueado=false;
 
 function normalizarRecurso(v){
   return String(v||"").trim().toUpperCase();
@@ -117,15 +117,11 @@ function actualizarRecursoCodigo(){
 }
 
 function reiniciarCapturaCodigo(){
-  clearTimeout(timerAuto);
-  primeraTeclaCodigo=0;
-  ultimaTeclaCodigo=0;
   codigoBloqueado=false;
 }
 
 function rechazarEntradaCodigo(e){
   if(e&&e.preventDefault)e.preventDefault();
-  clearTimeout(timerAuto);
   codigoBloqueado=true;
   setEstado("Solo se permiten 5 dígitos numéricos. Borre y vuelva a ingresar el código.");
 }
@@ -248,6 +244,15 @@ function avisarNoRegistrado(mensaje,elemento){
   if(elemento)elemento.focus();
 }
 
+function pedirDatoPendiente(mensaje,elemento){
+  setEstado("Código listo. "+mensaje);
+  if(elemento)elemento.focus();
+}
+
+function completarRegistroPendiente(){
+  if(!codigoBloqueado&&/^\d{5}$/.test($("codigo").value)&&!registrando)registrar();
+}
+
 function registrar(){
   if(registrando)return;
 
@@ -272,12 +277,12 @@ function registrar(){
   if(estacionUsaRecurso(estacion))recurso=recursoAsignadoProceso(codigo,estacion)||recurso;
 
   if(!operador){
-  avisarNoRegistrado("Falta ingresar el operador.",$("operador"));
+  pedirDatoPendiente("Ingrese el operador para registrar.",$("operador"));
   return;
 }
 
   if(estacion==="BALANZA"&&!tipoMineral){
-    avisarNoRegistrado("Seleccione el tipo y estado del mineral.",$("tipoMineral"));
+    pedirDatoPendiente("Seleccione el tipo y estado del mineral.",tipo?$("estadoMineral"):$("tipoMineral"));
     return;
   }
 
@@ -285,7 +290,7 @@ function registrar(){
   ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(estacion) &&
   !recurso && !(estacion==="DESCARGUIO"&&modoEspecial!=="NORMAL")
 ){
-  avisarNoRegistrado("Seleccione "+$("recursoLabel").textContent+".",$("recurso"));
+  pedirDatoPendiente("Seleccione "+$("recursoLabel").textContent+" para registrar.",$("recurso"));
   return;
 }
 
@@ -311,7 +316,7 @@ function registrar(){
   if(estacion==="MUESTREO"){
     const ubicacionFijada=ubicacionMuestreoAsignada(codigo);
     if(!ubicacionElegida&&!ubicacionFijada){
-      avisarNoRegistrado("Seleccione la ubicación de muestreo para la RECEPCIÓN.",$("muestreoSector").value?$("muestreoNumero"):$("muestreoSector"));
+      pedirDatoPendiente("Seleccione la ubicación de muestreo para la RECEPCIÓN.",$("muestreoSector").value?$("muestreoNumero"):$("muestreoSector"));
       registrando=false;
       return;
     }
@@ -325,12 +330,12 @@ function registrar(){
   }
 
   if(estacion==="DESCARGUIO"&&evento==="EN STOCK"&&!motivoStock){
-    avisarNoRegistrado("Seleccione el motivo de stock.",$("motivoStock"));
+    pedirDatoPendiente("Seleccione el motivo de stock para registrar.",$("motivoStock"));
     registrando=false;
     return;
   }
   if(estacion==="MUESTREO"&&evento==="EN STOCK"&&!motivoStock){
-    avisarNoRegistrado("Seleccione el motivo de stock.",$("motivoStock"));
+    pedirDatoPendiente("Seleccione el motivo de stock para registrar.",$("motivoStock"));
     registrando=false;
     return;
   }
@@ -368,7 +373,13 @@ function registrar(){
     version:APP_VERSION
   };
 
-  agregarRegistro(registro);
+  try{
+    agregarRegistro(registro);
+  }catch(error){
+    registrando=false;
+    pedirDatoPendiente("No se pudo guardar en este dispositivo: "+String(error.message||error),$("codigo"));
+    return;
+  }
   $("codigo").value="";
   reiniciarCapturaCodigo();
 
@@ -454,6 +465,12 @@ function render(){
     filas+
     "</table>";
 
+  const tiempos=calcularTiemposProceso(registros).slice(0,50);
+  $("tablaTiempos").innerHTML=tiempos.length
+    ?"<table><tr><th>Código</th><th>Estación</th><th>Estado</th><th>Espera</th><th>Parada</th><th>Proceso efectivo</th><th>Permanencia</th></tr>"+
+      tiempos.map(t=>`<tr><td>${t.codigo}</td><td>${t.estacion}</td><td>${t.completo?"FINAL":"EN CURSO"}</td><td>${relojDuracion(t.espera)}</td><td>${relojDuracion(t.parada)}</td><td>${relojDuracion(t.proceso)}</td><td>${relojDuracion(t.permanencia)}</td></tr>`).join("")+"</table>"
+    :'<div class="note">Aún no hay eventos para calcular tiempos.</div>';
+
   if(!$("seguimientoModal").classList.contains("hide")){
     renderSeguimiento();
   }
@@ -474,14 +491,8 @@ function iniciar(){
   $("codigo").addEventListener("keydown",e=>{
     if(e.key==="Enter"){
       e.preventDefault();
-      clearTimeout(timerAuto);
       if(codigoBloqueado)return;
-      if(/^\d{5}$/.test($("codigo").value.trim())&&
-         primeraTeclaCodigo&&Date.now()-primeraTeclaCodigo<=SCANNER_BURST_MS){
-        timerAuto=setTimeout(registrar,SCANNER_SETTLE_MS);
-      }else if($("codigo").value.trim()){
-        timerAuto=setTimeout(registrar,AUTO_REGISTER_DELAY_MS);
-      }
+      if(/^\d{5}$/.test($("codigo").value))registrar();
     }
   });
 
@@ -495,8 +506,7 @@ function iniciar(){
     if(texto!=null&&!/^\d{0,5}$/.test(codigoTrasInsercion(texto)))rechazarEntradaCodigo(e);
   });
 
-  $("codigo").addEventListener("input",e=>{
-    clearTimeout(timerAuto);
+  $("codigo").addEventListener("input",()=>{
     const campo=$("codigo"),valor=campo.value;
     if(!/^\d{0,5}$/.test(valor)){
       campo.value=valor.replace(/\D/g,"").slice(0,5);
@@ -505,27 +515,18 @@ function iniciar(){
       return;
     }
     codigoBloqueado=false;
-    const codigo=valor,ahora=Date.now();
-    if(!primeraTeclaCodigo||ahora-ultimaTeclaCodigo>SCANNER_BURST_MS)primeraTeclaCodigo=ahora;
-    ultimaTeclaCodigo=ahora;
+    const codigo=valor;
     actualizarRecursoCodigo();
     if(!codigo){reiniciarCapturaCodigo();setEstado("");return;}
-    if(!/^\d{0,5}$/.test(codigo)){
-      setEstado("El código debe tener exactamente 5 dígitos numéricos.");
-    }else if(codigo.length<5){
+    if(codigo.length<5){
       setEstado(`Código incompleto: ${codigo.length}/5 dígitos.`);
     }else{
-      setEstado("Código completo. Puede corregirlo antes del registro manual.");
-      // Un lector pega los cinco dígitos de una vez o los teclea en una ráfaga.
-      if(e.inputType==="insertFromPaste"||
-         (codigo.length===5&&primeraTeclaCodigo!==ahora&&ahora-primeraTeclaCodigo<=SCANNER_BURST_MS)){
-        timerAuto=setTimeout(registrar,SCANNER_SETTLE_MS);return;
-      }
+      registrar();
     }
-    timerAuto=setTimeout(registrar,AUTO_REGISTER_DELAY_MS);
   });
 
   $("operador").addEventListener("input",guardarPreferencias);
+  $("operador").addEventListener("change",completarRegistroPendiente);
 
   $("estacion").addEventListener("change",()=>{
     $("codigo").value="";
@@ -538,21 +539,15 @@ function iniciar(){
     enfocarCodigo();
   });
 
-  $("tipoMineral").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); });
-  $("estadoMineral").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
-  $("motivoStock").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
-  $("muestreoSector").addEventListener("change",()=>{ configurarNumeracionMuestreo(); $("codigo").value=""; setEstado(""); });
-  $("muestreoNumero").addEventListener("change",()=>{ $("codigo").value=""; setEstado(""); enfocarCodigo(); });
+  $("tipoMineral").addEventListener("change",completarRegistroPendiente);
+  $("estadoMineral").addEventListener("change",completarRegistroPendiente);
+  $("motivoStock").addEventListener("change",completarRegistroPendiente);
+  $("muestreoSector").addEventListener("change",()=>{ configurarNumeracionMuestreo(); completarRegistroPendiente(); });
+  $("muestreoNumero").addEventListener("change",completarRegistroPendiente);
 
   $("recurso").addEventListener("change",()=>{
-  // Garantiza que el campo de escaneo quede vacío
-  $("codigo").value="";
-
-  // Limpia el mensaje de error anterior
-  setEstado("");
-
-  // Regresa el cursor al campo de escaneo
-  enfocarCodigo();
+    if(/^\d{5}$/.test($("codigo").value))completarRegistroPendiente();
+    else{setEstado("");enfocarCodigo();}
 });
 
   $("modoInicioBtn").onclick=()=>seleccionarModo("NORMAL");
