@@ -1,11 +1,12 @@
-const APP_VERSION="0002.9.7";
+const APP_VERSION="0002.9.9";
 const DB_KEY="kamban_acopio_db_v0001";
 const DB_BACKUP_KEY="kamban_acopio_db_respaldo_v0001";
 const LAST_SYNC_KEY="kamban_ultima_sync_v0001";
 const LAST_TURN_CLEAR_KEY="kamban_turno_v0001";
 const ADMIN_PIN="1234";
-const ENDPOINT_FIJO="https://script.google.com/macros/s/AKfycbxSU5AteIl0u7FoOCeLNssQEVWvEvNssTGwkKZ4-vDSHUKeV64HXJdIH0NKs2u_HdQ/exec";
+const ENDPOINT_FIJO="https://script.google.com/macros/s/AKfycbx-wFVYRUYYFJsJdfvLSj5Aive8Rj4Qmgl9o1KtZtYr6kfV7jk3fL50h6ftHJESELug/exec";
 const BACKEND_VERSION_ESPERADA="0002.9.0";
+const BACKEND_REVISION_ESPERADA="0002.9.7";
 const DEVICE_ID_KEY="kamban_dispositivo_id_v0001";
 const DEVICE_NAME_KEY="kamban_dispositivo_nombre_v0001";
 const DEVICE_HEARTBEAT_MS=60000;

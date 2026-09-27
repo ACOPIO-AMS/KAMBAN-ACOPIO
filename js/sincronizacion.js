@@ -97,7 +97,8 @@ async function verificarBackend(forzar=false){
   if(String(r.version||"")!==String(BACKEND_VERSION_ESPERADA)){
     throw new Error("Backend incompatible. Encontrado: "+String(r.version||"sin versión")+" | Esperado: "+BACKEND_VERSION_ESPERADA);
   }
-  if(r.tiempos_base!==true)throw new Error("La URL configurada responde con Apps Script antiguo. Implemente la nueva versión de INGRESO_DE_DATOS.gs (ping debe devolver tiempos_base: true).");
+  if(r.tiempos_base!==true||String(r.revision||"")!==BACKEND_REVISION_ESPERADA)
+    throw new Error("La implementación de Apps Script no confirma la revisión "+BACKEND_REVISION_ESPERADA+" con tiempos_base: true. Revise el despliegue y las funciones doGet duplicadas del proyecto.");
   syncBackendVerificadoEn=now;
   return true;
 }
