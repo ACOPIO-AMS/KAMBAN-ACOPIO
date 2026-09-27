@@ -1,5 +1,6 @@
-/* KANBAN 0002.8.5 - SINCRONIZACIÓN SEGURA Y LIGERA */
+/* KANBAN 0002.9.7 - SINCRONIZACIÓN Y DIAGNÓSTICO */
 let syncProcesando=false,syncTimerPeriodico=null,syncTimerReintento=null,syncBackendVerificadoEn=0;
+let syncUltimoError="";
 const syncEnCurso=new Set();
 let borradoSyncProcesando=false;
 let dispositivoUltimoReporte=0,dispositivoReporteEnCurso=false;
@@ -96,7 +97,7 @@ async function verificarBackend(forzar=false){
   if(String(r.version||"")!==String(BACKEND_VERSION_ESPERADA)){
     throw new Error("Backend incompatible. Encontrado: "+String(r.version||"sin versión")+" | Esperado: "+BACKEND_VERSION_ESPERADA);
   }
-  if(r.tiempos_base!==true)throw new Error("Actualice la implementación de Apps Script para guardar los tiempos en la base.");
+  if(r.tiempos_base!==true)throw new Error("La URL configurada responde con Apps Script antiguo. Implemente la nueva versión de INGRESO_DE_DATOS.gs (ping debe devolver tiempos_base: true).");
   syncBackendVerificadoEn=now;
   return true;
 }
@@ -136,8 +137,13 @@ async function procesarPendientesSync(manual=false){
   if(!endpoint()){if(manual)alert("Falta configurar la URL de Apps Script.");return}
   if(!navigator.onLine){if(manual)alert("Sin conexión. Los registros quedan guardados localmente.");return}
 
+  // Permite volver a probar registros observados en versiones anteriores.
+  if(manual)pendientesSyncOrdenados().filter(r=>r.sync_bloqueado).forEach(r=>
+    actualizarRegistro(String(r.id),{sync_bloqueado:false}));
+
   syncProcesando=true;
   let enviados=0,observados=0,ultimoError="";
+  const intentados=new Set();
 
   try{
     // Antes de enviar se verifica la versión una sola vez cada cinco minutos.
@@ -146,9 +152,10 @@ async function procesarPendientesSync(manual=false){
 
     while(navigator.onLine){
       const candidatos=pendientesSyncOrdenados()
-        .filter(r=>!syncEnCurso.has(String(r.id))&&!r.sync_bloqueado)
+        .filter(r=>!syncEnCurso.has(String(r.id))&&!r.sync_bloqueado&&!intentados.has(String(r.id)))
         .slice(0,SYNC_BATCH_SIZE);
       if(!candidatos.length)break;
+      candidatos.forEach(r=>intentados.add(String(r.id)));
 
       const payloads=[];
       for(const registro of candidatos){
@@ -171,7 +178,7 @@ async function procesarPendientesSync(manual=false){
             enviados++;
           }else{
             const msg=String(x&&x.error||"El servidor no confirmó el registro.");
-            actualizarRegistro(String(p.id),{sincronizado:false,sync_bloqueado:true,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
+            actualizarRegistro(String(p.id),{sincronizado:false,sync_bloqueado:false,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
             ultimoError=msg;observados++;
           }
         });
@@ -188,11 +195,15 @@ async function procesarPendientesSync(manual=false){
     }
   }catch(error){
     ultimoError=String(error&&error.message?error.message:error);
-    programarReintentoGlobal(SYNC_RETRY_BASE_MS);
+    programarReintentoGlobal(SYNC_RETRY_MAX_MS);
   }finally{
     syncProcesando=false;
+    syncUltimoError=ultimoError;
     render();
+    if(!$("adminModal").classList.contains("hide"))actualizarAdmin();
   }
+
+  if(observados&&ultimoError)programarReintentoGlobal(SYNC_RETRY_MAX_MS);
 
   if(manual){
     const faltan=pendientesSyncOrdenados().length;

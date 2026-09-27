@@ -1,6 +1,6 @@
 function abrirAdmin(){const pin=prompt("Clave administrador:");if(pin!==ADMIN_PIN){if(pin!==null)alert("Clave incorrecta.");return}$("adminModal").classList.remove("hide");actualizarAdmin();actualizarControlDispositivos()}
 function cerrarAdmin(){$("adminModal").classList.add("hide");$("seleccionBox").classList.add("hide");enfocarCodigo()}
-function actualizarAdmin(){const d=datos();$("adminInfo").textContent=`Registros locales: ${d.length} | Pendientes sync: ${d.filter(r=>!r.sincronizado).length}`}
+function actualizarAdmin(){const d=datos(),pendientes=d.filter(r=>!r.sincronizado),ultimo=syncUltimoError||pendientes.map(r=>r.sync_ultimo_error).find(Boolean)||"";$("adminInfo").textContent=`Registros locales: ${d.length} | Pendientes sync: ${pendientes.length}${ultimo?" | Motivo: "+ultimo:""}`}
 function configurarEquipoActual(){const actual=nombreDispositivo()==="EQUIPO SIN NOMBRE"?"":nombreDispositivo();const nombre=prompt("Nombre para identificar esta PC o celular.\nEjemplo: CELULAR CHANCADO 1",actual);if(nombre===null)return;const limpio=String(nombre).trim().toUpperCase();if(!limpio){alert("Debe ingresar un nombre para el equipo.");return;}localStorage.setItem(DEVICE_NAME_KEY,limpio);reportarEstadoDispositivo(true);actualizarAdmin()}
 function fechaControl(v){return String(v||"-").replace("T"," ")}
 function claseControl(d){const ultima=new Date(String(d.ultima_conexion||"").replace(" ","T"));const minutos=isNaN(ultima)?9999:Math.floor((Date.now()-ultima.getTime())/60000);if(minutos>5)return ["SIN CONEXIÓN","bad"];if(Number(d.pendientes||0)>0)return ["PENDIENTE","bad"];return ["CORRECTO","ok"]}
@@ -30,8 +30,8 @@ function actualizarResumenBorrado(){
   $("seleccionarTodos").indeterminate=marcados>0&&marcados<visibles.length;
 }
 function renderSeleccionBorrado(){
-  const rows=registrosBorradoVisibles().map(r=>`<tr><td><input type="checkbox" class="selBorrar" value="${textoTabla(r.id)}" ${seleccionBorradoIds.has(r.id)?"checked":""}></td><td>${textoTabla(r.codigo)}</td><td>${textoTabla(r.evento)}</td><td>${textoTabla(r.fecha_hora)}</td><td>${textoTabla(r.estacion)}</td><td>${textoTabla(recursoCSV(r)||"-")}</td><td>${r.sincronizado?"OK":"PEND"}</td></tr>`).join("");
-  $("tablaSeleccion").innerHTML="<table><tr><th></th><th>Código</th><th>Evento</th><th>Fecha</th><th>Estación</th><th>Recurso</th><th>Sync</th></tr>"+rows+"</table>";
+  const rows=registrosBorradoVisibles().map(r=>`<tr><td><input type="checkbox" class="selBorrar" value="${textoTabla(r.id)}" ${seleccionBorradoIds.has(r.id)?"checked":""}></td><td>${textoTabla(r.codigo)}</td><td>${textoTabla(r.evento)}</td><td>${textoTabla(r.fecha_hora)}</td><td>${textoTabla(r.estacion)}</td><td>${textoTabla(recursoCSV(r)||"-")}</td><td>${r.sincronizado?"OK":"PEND"}</td><td>${textoTabla(r.sync_ultimo_error||"")}</td></tr>`).join("");
+  $("tablaSeleccion").innerHTML="<table><tr><th></th><th>Código</th><th>Evento</th><th>Fecha</th><th>Estación</th><th>Recurso</th><th>Sync</th><th>Motivo si quedó pendiente</th></tr>"+rows+"</table>";
   actualizarResumenBorrado();
 }
 function mostrarBorradoSeleccionados(){
