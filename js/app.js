@@ -1,4 +1,4 @@
-let registrando=false,timerAuto=null,timerCambioTurno=null;
+let registrando=false,timerAuto=null,timerCambioTurno=null,primeraTeclaCodigo=0,ultimaTeclaCodigo=0,codigoBloqueado=false;
 
 function normalizarRecurso(v){
   return String(v||"").trim().toUpperCase();
@@ -92,12 +92,48 @@ function configurarRecurso(){
     Array.from(
       {length:maximo},
       (_,i)=>`<option value="${prefijo}${i+1}">${i+1}</option>`
-    ).join("");
+    ).join("")+(estacion==="DESCARGUIO"?'<option value="PATIO">PATIO</option>':"");
 
-  // El recurso nunca queda preseleccionado entre registros.
-  // El operario debe confirmarlo en cada lectura para evitar asignaciones accidentales.
   selector.value="";
+  selector.disabled=false;
   localStorage.removeItem("kamban_recurso_"+estacion);
+}
+
+function actualizarRecursoCodigo(){
+  const codigo=$("codigo").value.trim(),estacion=$("estacion").value;
+  if(!estacionUsaRecurso(estacion))return;
+  const asignado=/^\d{5}$/.test(codigo)?recursoAsignadoProceso(codigo,estacion):"";
+  const selector=$("recurso");
+  if(asignado&&Array.from(selector.options).some(op=>op.value===asignado)){
+    selector.value=asignado;
+    selector.disabled=true;
+  }else{
+    if(selector.disabled)selector.value="";
+    selector.disabled=false;
+  }
+  $("recursoBox").querySelector(".note").textContent=asignado
+    ?"Recurso recuperado del registro anterior de este lote."
+    :"Seleccione recurso para el primer evento de este lote.";
+}
+
+function reiniciarCapturaCodigo(){
+  clearTimeout(timerAuto);
+  primeraTeclaCodigo=0;
+  ultimaTeclaCodigo=0;
+  codigoBloqueado=false;
+}
+
+function rechazarEntradaCodigo(e){
+  if(e&&e.preventDefault)e.preventDefault();
+  clearTimeout(timerAuto);
+  codigoBloqueado=true;
+  setEstado("Solo se permiten 5 dígitos numéricos. Borre y vuelva a ingresar el código.");
+}
+
+function codigoTrasInsercion(entrada){
+  const campo=$("codigo"),desde=campo.selectionStart??campo.value.length;
+  const hasta=campo.selectionEnd??desde;
+  return campo.value.slice(0,desde)+entrada+campo.value.slice(hasta);
 }
 
 function configurarCamposEspeciales(){
@@ -198,13 +234,16 @@ function actualizarModo(){
 function seleccionarModo(modo){
   modoEspecial=modo;
   actualizarModo();
-  enfocarCodigo();
+  if(modo==="EN STOCK")$("motivoStock").focus();
+  else enfocarCodigo();
 }
 
 function avisarNoRegistrado(mensaje,elemento){
   const texto="NO SE REGISTRÓ EL EVENTO.\n\n"+mensaje;
   setEstado(texto);
   $("codigo").value="";
+  reiniciarCapturaCodigo();
+  actualizarRecursoCodigo();
   alert(texto);
   if(elemento)elemento.focus();
 }
@@ -226,6 +265,11 @@ function registrar(){
   let recurso=estacion==="BALANZA"?tipoMineral:(estacion==="MUESTREO"?ubicacion:recursoEquipo);
 
   if(!codigo)return;
+  if(!/^\d{5}$/.test(codigo)){
+    avisarNoRegistrado("El código debe tener exactamente 5 dígitos numéricos.",$("codigo"));
+    return;
+  }
+  if(estacionUsaRecurso(estacion))recurso=recursoAsignadoProceso(codigo,estacion)||recurso;
 
   if(!operador){
   avisarNoRegistrado("Falta ingresar el operador.",$("operador"));
@@ -326,12 +370,15 @@ function registrar(){
 
   agregarRegistro(registro);
   $("codigo").value="";
+  reiniciarCapturaCodigo();
 
   // Limpiar el recurso después de cada registro confirmado localmente.
   if($("recurso")){
     $("recurso").value="";
+    $("recurso").disabled=false;
     localStorage.removeItem("kamban_recurso_"+estacion);
   }
+  actualizarRecursoCodigo();
   if(estacion==="BALANZA"){ $("tipoMineral").value=""; $("estadoMineral").value=""; }
   if(permiteStock(estacion))$("motivoStock").value="";
   if(estacion==="MUESTREO"){ $("muestreoSector").value=""; configurarNumeracionMuestreo(); }
@@ -428,21 +475,61 @@ function iniciar(){
     if(e.key==="Enter"){
       e.preventDefault();
       clearTimeout(timerAuto);
-      registrar();
+      if(codigoBloqueado)return;
+      if(/^\d{5}$/.test($("codigo").value.trim())&&
+         primeraTeclaCodigo&&Date.now()-primeraTeclaCodigo<=SCANNER_BURST_MS){
+        timerAuto=setTimeout(registrar,SCANNER_SETTLE_MS);
+      }else if($("codigo").value.trim()){
+        timerAuto=setTimeout(registrar,AUTO_REGISTER_DELAY_MS);
+      }
     }
   });
 
-  $("codigo").addEventListener("input",()=>{
-    clearTimeout(timerAuto);
+  $("codigo").addEventListener("beforeinput",e=>{
+    if(!e.inputType||!e.inputType.startsWith("insert")||e.inputType==="insertFromPaste")return;
+    if(e.data!=null&&!/^\d{0,5}$/.test(codigoTrasInsercion(e.data)))rechazarEntradaCodigo(e);
+  });
 
-    if($("codigo").value.trim()){
-      timerAuto=setTimeout(registrar,AUTO_REGISTER_DELAY_MS);
+  $("codigo").addEventListener("paste",e=>{
+    const texto=e.clipboardData&&e.clipboardData.getData("text");
+    if(texto!=null&&!/^\d{0,5}$/.test(codigoTrasInsercion(texto)))rechazarEntradaCodigo(e);
+  });
+
+  $("codigo").addEventListener("input",e=>{
+    clearTimeout(timerAuto);
+    const campo=$("codigo"),valor=campo.value;
+    if(!/^\d{0,5}$/.test(valor)){
+      campo.value=valor.replace(/\D/g,"").slice(0,5);
+      rechazarEntradaCodigo();
+      actualizarRecursoCodigo();
+      return;
     }
+    codigoBloqueado=false;
+    const codigo=valor,ahora=Date.now();
+    if(!primeraTeclaCodigo||ahora-ultimaTeclaCodigo>SCANNER_BURST_MS)primeraTeclaCodigo=ahora;
+    ultimaTeclaCodigo=ahora;
+    actualizarRecursoCodigo();
+    if(!codigo){reiniciarCapturaCodigo();setEstado("");return;}
+    if(!/^\d{0,5}$/.test(codigo)){
+      setEstado("El código debe tener exactamente 5 dígitos numéricos.");
+    }else if(codigo.length<5){
+      setEstado(`Código incompleto: ${codigo.length}/5 dígitos.`);
+    }else{
+      setEstado("Código completo. Puede corregirlo antes del registro manual.");
+      // Un lector pega los cinco dígitos de una vez o los teclea en una ráfaga.
+      if(e.inputType==="insertFromPaste"||
+         (codigo.length===5&&primeraTeclaCodigo!==ahora&&ahora-primeraTeclaCodigo<=SCANNER_BURST_MS)){
+        timerAuto=setTimeout(registrar,SCANNER_SETTLE_MS);return;
+      }
+    }
+    timerAuto=setTimeout(registrar,AUTO_REGISTER_DELAY_MS);
   });
 
   $("operador").addEventListener("input",guardarPreferencias);
 
   $("estacion").addEventListener("change",()=>{
+    $("codigo").value="";
+    reiniciarCapturaCodigo();
     guardarPreferencias();
     configurarRecurso();
     configurarCamposEspeciales();

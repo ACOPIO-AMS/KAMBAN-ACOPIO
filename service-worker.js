@@ -1,18 +1,18 @@
-const CACHE = 'kamban-acopio-0002.9.0-ligero';
+const CACHE = 'kamban-acopio-0002.9.2-ligero';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.9.0-ligero',
-  './js/config.js?v=0002.9.0-ligero',
-  './js/utilidades.js?v=0002.9.0-ligero',
-  './js/db.js?v=0002.9.0-ligero',
-  './js/reglas.js?v=0002.9.0-ligero',
-  './js/sincronizacion.js?v=0002.9.0-ligero',
-  './js/seguimiento.js?v=0002.9.0-ligero',
-  './js/admin.js?v=0002.9.0-ligero',
-  './js/app.js?v=0002.9.0-ligero',
+  './css/estilos.css?v=0002.9.2-ligero',
+  './js/config.js?v=0002.9.2-ligero',
+  './js/utilidades.js?v=0002.9.2-ligero',
+  './js/db.js?v=0002.9.2-ligero',
+  './js/reglas.js?v=0002.9.2-ligero',
+  './js/sincronizacion.js?v=0002.9.2-ligero',
+  './js/seguimiento.js?v=0002.9.2-ligero',
+  './js/admin.js?v=0002.9.2-ligero',
+  './js/app.js?v=0002.9.2-ligero',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
