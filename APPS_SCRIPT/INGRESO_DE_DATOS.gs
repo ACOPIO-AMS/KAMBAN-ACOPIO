@@ -1,5 +1,7 @@
 /**
  * KANBAN BACKEND REVISION 0002.9.7 - TIEMPOS EN BASE
+ * Compatible con la app 0002.9.9.
+ * En el proyecto Apps Script debe haber un solo doGet y un solo doPost.
  * KA_VERSION 0002.9.0 mantiene la compatibilidad con clientes anteriores.
  * El ping incluye revision 0002.9.7 y tiempos_base:true para verificar la implementacion.
  * A CODIGO | B EVENTO | C FECHA Y HORA | D OPERARIO
