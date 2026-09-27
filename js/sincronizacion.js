@@ -96,6 +96,7 @@ async function verificarBackend(forzar=false){
   if(String(r.version||"")!==String(BACKEND_VERSION_ESPERADA)){
     throw new Error("Backend incompatible. Encontrado: "+String(r.version||"sin versión")+" | Esperado: "+BACKEND_VERSION_ESPERADA);
   }
+  if(r.tiempos_base!==true)throw new Error("Actualice la implementación de Apps Script para guardar los tiempos en la base.");
   syncBackendVerificadoEn=now;
   return true;
 }

@@ -1,16 +1,18 @@
-# KANBAN CIRCUITO ACOPIO V0002.9.5
+# KANBAN CIRCUITO ACOPIO V0002.9.6
 
-## Tiempos de proceso
-La tabla «Tiempos por lote y estación» usa los eventos guardados en el dispositivo. Muestra espera (INICIO − RECEPCIÓN), paradas acumuladas (REINICIO − PARADA), proceso efectivo (FINAL − INICIO − paradas) y permanencia (FINAL − RECEPCIÓN). Las duraciones se presentan en hh:mm:ss. La espera queda «—» en estaciones sin RECEPCIÓN. En MUESTREO, SALIDA STOCK hace de inicio si no hay otro INICIO. Los eventos faltantes o tiempos fuera de orden quedan «—». No agrega columnas a Google Sheets.
+## Cambios
+- La tabla «Registros locales» muestra espera, paradas, proceso efectivo y permanencia en la fila FINAL. Se eliminó la tabla separada de tiempos.
+- Apps Script añade I ESPERA, J PARADAS, K PROCESO EFECTIVO y L PERMANENCIA en cada hoja de estación. Escribe hh:mm:ss en la fila FINAL y recalcula si llega otro evento del mismo código después.
+- El recálculo examina las últimas 2000 filas de cada estación para el código afectado; los ciclos anteriores a ese tramo no se reconstruyen automáticamente.
+- El administrador permite buscar por código, evento, operador, fecha, estación o recurso, filtrar estación y seleccionar registros visibles sin perder selecciones al cambiar de filtro. El borrado mantiene el límite de 50 por bloque y la confirmación.
+- Se conservan el código de cinco dígitos, el registro inmediato, el recurso heredado y PATIO de las versiones anteriores.
 
-## Cambios de esta versión
-- Si el quinto dígito llega antes de completar operador, recurso, mineral, ubicación o motivo de stock, el código se conserva y la pantalla indica el dato faltante. Al completarlo se guarda el evento sin escanear otra vez.
-- El campo bloquea letras, símbolos y más de cinco dígitos al escribir o pegar. Una lectura inválida se bloquea y no genera eventos.
-- El código debe tener exactamente cinco dígitos numéricos. El quinto dígito dispara el registro inmediatamente, tanto en digitación manual como en escaneo.
-- En DESCARGUIO, CHANCADO, SECADO y PULVERIZADO el primer evento pide recurso; los siguientes del mismo código y estación reutilizan el recurso guardado en este dispositivo. El selector muestra el recurso recuperado.
-- DESCARGUIO incluye PATIO como recurso.
-- El motivo de EN STOCK se despliega debajo de los botones de modo y recibe el foco al seleccionar EN STOCK.
-- Esta versión cambia solo la interfaz. El Apps Script incluido es el backend 2.9.0, compatible con esta actualización; no requiere nueva implementación del backend.
+## Cálculos
+Espera = INICIO − RECEPCIÓN. Paradas = suma de REINICIO − PARADA. Proceso efectivo = FINAL − INICIO − paradas. Permanencia = FINAL − RECEPCIÓN. En MUESTREO, SALIDA STOCK actúa como inicio si no existe INICIO. Sin RECEPCIÓN la espera y permanencia quedan vacías. Una parada sin reinicio no produce tiempo efectivo válido.
 
 ## Instalación
-Reemplace los archivos de la web con el contenido de esta carpeta. Conserve los datos locales del navegador para mantener el historial y la cola pendiente de sincronización. La caché de la app cambia a 0002.9.5-ligero.
+1. Copie `APPS_SCRIPT/INGRESO_DE_DATOS.gs` al proyecto de Apps Script y actualice su implementación existente, conservando la URL. Hágalo antes de subir la interfaz: la nueva app verifica que el backend admita los tiempos; si todavía no está actualizado, los registros permanecen locales y pendientes de sincronizar.
+2. Reemplace los archivos web por los de esta carpeta. Compruebe que el encabezado muestre 0002.9.6. No borre los datos del navegador: incluyen registros pendientes.
+3. Compruebe I:L en una hoja de estación. Si ya hay otros encabezados allí, el servidor detendrá el guardado de tiempos y avisará para evitar sobrescribirlos.
+
+El backend mantiene la respuesta de versión 0002.9.0 para que los celulares con la interfaz anterior sigan sincronizando mientras se actualizan. La nueva app comprueba adicionalmente la capacidad `tiempos_base`.

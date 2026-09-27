@@ -445,8 +445,11 @@ function render(){
        "</table>"
       :"";
 
+  const tiemposPorFinal=new Map(calcularTiemposProceso(registros)
+    .filter(t=>t.finId).map(t=>[t.finId,t]));
   const filas=registros.slice(0,120).map(r=>{
     const [texto,clase]=estadoRegistro(r);
+    const t=tiemposPorFinal.get(String(r.id));
 
     return `<tr>
       <td>${r.codigo}</td>
@@ -455,21 +458,19 @@ function render(){
       <td>${r.operador}</td>
       <td>${r.estacion}</td>
       <td>${recursoDetalle(r)||"-"}</td>
+      <td>${t?relojDuracion(t.espera):"—"}</td>
+      <td>${t?relojDuracion(t.parada):"—"}</td>
+      <td>${t?relojDuracion(t.proceso):"—"}</td>
+      <td>${t?relojDuracion(t.permanencia):"—"}</td>
       <td><span class="estadoBadge ${clase}">${texto}</span></td>
       <td class="${r.sincronizado?"ok":"bad"}">${r.sincronizado?"OK":"PEND"}</td>
     </tr>`;
   }).join("");
 
   $("tablaLocal").innerHTML=
-    "<table><tr><th>Código</th><th>Evento</th><th>Fecha/Hora</th><th>Operador</th><th>Estación</th><th>Recurso</th><th>Estado</th><th>Sync</th></tr>"+
+    "<table><tr><th>Código</th><th>Evento</th><th>Fecha/Hora</th><th>Operador</th><th>Estación</th><th>Recurso</th><th>Espera</th><th>Paradas</th><th>Proceso</th><th>Permanencia</th><th>Estado</th><th>Sync</th></tr>"+
     filas+
     "</table>";
-
-  const tiempos=calcularTiemposProceso(registros).slice(0,50);
-  $("tablaTiempos").innerHTML=tiempos.length
-    ?"<table><tr><th>Código</th><th>Estación</th><th>Estado</th><th>Espera</th><th>Parada</th><th>Proceso efectivo</th><th>Permanencia</th></tr>"+
-      tiempos.map(t=>`<tr><td>${t.codigo}</td><td>${t.estacion}</td><td>${t.completo?"FINAL":"EN CURSO"}</td><td>${relojDuracion(t.espera)}</td><td>${relojDuracion(t.parada)}</td><td>${relojDuracion(t.proceso)}</td><td>${relojDuracion(t.permanencia)}</td></tr>`).join("")+"</table>"
-    :'<div class="note">Aún no hay eventos para calcular tiempos.</div>';
 
   if(!$("seguimientoModal").classList.contains("hide")){
     renderSeguimiento();
@@ -571,10 +572,21 @@ function iniciar(){
   $("borrarSeleccionadosBtn").onclick=mostrarBorradoSeleccionados;
   $("confirmarSeleccionBtn").onclick=confirmarBorradoSeleccionados;
 
-  $("seleccionarTodos").onchange=e=>
-    document
-      .querySelectorAll(".selBorrar")
-      .forEach(x=>x.checked=e.target.checked);
+  $("filtroBorrarTexto").addEventListener("input",renderSeleccionBorrado);
+  $("filtroBorrarEstacion").addEventListener("change",renderSeleccionBorrado);
+  $("tablaSeleccion").addEventListener("change",e=>{
+    if(!e.target.classList.contains("selBorrar"))return;
+    if(e.target.checked)seleccionBorradoIds.add(e.target.value);
+    else seleccionBorradoIds.delete(e.target.value);
+    actualizarResumenBorrado();
+  });
+  $("seleccionarTodos").onchange=e=>{
+    registrosBorradoVisibles().forEach(r=>{
+      if(e.target.checked)seleccionBorradoIds.add(r.id);
+      else seleccionBorradoIds.delete(r.id);
+    });
+    renderSeleccionBorrado();
+  };
 
   // Respaldo para cambio de turno y actualización visual.
   setInterval(()=>{

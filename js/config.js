@@ -1,4 +1,4 @@
-const APP_VERSION="0002.9.5";
+const APP_VERSION="0002.9.6";
 const DB_KEY="kamban_acopio_db_v0001";
 const DB_BACKUP_KEY="kamban_acopio_db_respaldo_v0001";
 const LAST_SYNC_KEY="kamban_ultima_sync_v0001";

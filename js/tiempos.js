@@ -1,4 +1,4 @@
-/* Tiempos calculados a partir de los eventos locales, sin alterar la base. */
+/* Tiempos de los registros locales; Apps Script calcula los de la base al sincronizar. */
 function instanteEvento(valor){
   const t=Date.parse(String(valor||"").replace(" ","T"));
   return Number.isFinite(t)?t:null;
@@ -29,7 +29,7 @@ function calcularTiemposProceso(registros){
     let ciclo=null;
     const nuevo=()=>({codigo:eventos[0].codigo,estacion:eventos[0].estacion,
       recepcion:null,inicio:null,fin:null,paradaInicio:null,paradaSeg:0,
-      incompleto:false,ultimaFecha:""});
+      incompleto:false,ultimaFecha:"",finId:""});
     const cerrar=()=>{
       if(!ciclo)return;
       const espera=duracionEvento(ciclo.recepcion,ciclo.inicio);
@@ -38,7 +38,7 @@ function calcularTiemposProceso(registros){
         ?bruto-ciclo.paradaSeg:null;
       const permanencia=duracionEvento(ciclo.recepcion,ciclo.fin);
       if(ciclo.recepcion!==null||ciclo.inicio!==null){
-        resultados.push({codigo:ciclo.codigo,estacion:ciclo.estacion,ultimaFecha:ciclo.ultimaFecha,
+        resultados.push({codigo:ciclo.codigo,estacion:ciclo.estacion,ultimaFecha:ciclo.ultimaFecha,finId:ciclo.finId,
           espera,parada:ciclo.fin!==null&&!ciclo.incompleto&&ciclo.paradaInicio===null?ciclo.paradaSeg:null,
           proceso,permanencia,completo:ciclo.fin!==null});
       }
@@ -69,7 +69,7 @@ function calcularTiemposProceso(registros){
         }else if(ciclo)ciclo.incompleto=true;
       }else if(ev==="FINAL"){
         if(!ciclo)ciclo=nuevo();
-        if(ciclo.fin===null)ciclo.fin=t;
+        if(ciclo.fin===null){ciclo.fin=t;ciclo.finId=String(r.id||"");}
       }
       if(ciclo)ciclo.ultimaFecha=r.fecha_hora;
     });

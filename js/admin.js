@@ -12,5 +12,38 @@ function encolarBorrados(regs){const actuales=leerBorradosPendientes(),mapa=new 
 function borrarIdsEnLote(ids,avisar=true){const lote=ids.slice(0,BORRADO_LOTE_MAX);if(!lote.length)return 0;const before=datos(),regs=before.filter(r=>lote.includes(r.id));guardarDatos(before.filter(r=>!lote.includes(r.id)));encolarBorrados(regs);render();actualizarAdmin();if(avisar)alert(`Borrado local terminado: ${regs.length}. La eliminación remota se enviará en segundo plano cuando haya señal.${ids.length>lote.length?`\n\nQuedan ${ids.length-lote.length} registros por borrar.`:""}`);return regs.length}
 async function borrarAnterioresFinalizados(){const ids=gruposFinalizadosAnteriores(0);if(!ids.length){alert("No hay códigos finalizados sincronizados de días anteriores.");return}const lote=ids.slice(0,BORRADO_LOTE_MAX);if(!confirm(`Hay ${ids.length} registros elegibles.\n\nSe borrarán máximo ${lote.length} en este bloque para evitar demoras.\n\n¿Continuar?`))return;await borrarIdsEnLote(ids,true)}
 function limpiezaAutomaticaLocal(){const ids=gruposFinalizadosAnteriores(RETENCION_LOCAL_DIAS);if(!ids.length)return;borrarIdsEnLote(ids,false)}
-function mostrarBorradoSeleccionados(){$("seleccionBox").classList.remove("hide");const rows=datos().map(r=>`<tr><td><input type="checkbox" class="selBorrar" value="${r.id}"></td><td>${r.codigo}</td><td>${r.evento}</td><td>${r.fecha_hora}</td><td>${r.estacion}</td><td>${recursoCSV(r)||"-"}</td><td>${r.sincronizado?"OK":"PEND"}</td></tr>`).join("");$("tablaSeleccion").innerHTML="<table><tr><th></th><th>Código</th><th>Evento</th><th>Fecha</th><th>Estación</th><th>Recurso</th><th>Sync</th></tr>"+rows+"</table>";$("seleccionBox").scrollIntoView({block:"start",behavior:"smooth"})}
-function confirmarBorradoSeleccionados(){const ids=[...document.querySelectorAll(".selBorrar:checked")].map(x=>x.value);if(!ids.length){alert("Seleccione al menos un registro.");return}const lote=ids.slice(0,BORRADO_LOTE_MAX);if(!confirm(`Seleccionados: ${ids.length}.\nSe eliminarán máximo ${lote.length} en este bloque.\n\n¿Continuar?`))return;borrarIdsEnLote(lote,false);mostrarBorradoSeleccionados();alert(`Eliminados localmente: ${lote.length}. El envío remoto continuará en segundo plano.`)}
+const seleccionBorradoIds=new Set();
+function textoTabla(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function registrosBorradoVisibles(){
+  const filtro=String($("filtroBorrarTexto").value||"").trim().toUpperCase();
+  const estacion=$("filtroBorrarEstacion").value;
+  return datos().filter(r=>{
+    if(estacion&&r.estacion!==estacion)return false;
+    return !filtro||[r.codigo,r.evento,r.fecha_hora,r.operador,r.estacion,recursoCSV(r)]
+      .some(x=>String(x||"").toUpperCase().includes(filtro));
+  });
+}
+function actualizarResumenBorrado(){
+  const visibles=registrosBorradoVisibles(),marcados=visibles.filter(r=>seleccionBorradoIds.has(r.id)).length;
+  $("resumenBorrado").textContent=`Mostrados: ${visibles.length} | Seleccionados: ${seleccionBorradoIds.size}`;
+  $("seleccionarTodos").checked=visibles.length>0&&marcados===visibles.length;
+  $("seleccionarTodos").indeterminate=marcados>0&&marcados<visibles.length;
+}
+function renderSeleccionBorrado(){
+  const rows=registrosBorradoVisibles().map(r=>`<tr><td><input type="checkbox" class="selBorrar" value="${textoTabla(r.id)}" ${seleccionBorradoIds.has(r.id)?"checked":""}></td><td>${textoTabla(r.codigo)}</td><td>${textoTabla(r.evento)}</td><td>${textoTabla(r.fecha_hora)}</td><td>${textoTabla(r.estacion)}</td><td>${textoTabla(recursoCSV(r)||"-")}</td><td>${r.sincronizado?"OK":"PEND"}</td></tr>`).join("");
+  $("tablaSeleccion").innerHTML="<table><tr><th></th><th>Código</th><th>Evento</th><th>Fecha</th><th>Estación</th><th>Recurso</th><th>Sync</th></tr>"+rows+"</table>";
+  actualizarResumenBorrado();
+}
+function mostrarBorradoSeleccionados(){
+  seleccionBorradoIds.clear();$("filtroBorrarTexto").value="";$("filtroBorrarEstacion").value="";
+  $("seleccionBox").classList.remove("hide");renderSeleccionBorrado();
+  $("seleccionBox").scrollIntoView({block:"start",behavior:"smooth"});
+}
+function confirmarBorradoSeleccionados(){
+  const ids=[...seleccionBorradoIds];
+  if(!ids.length){alert("Seleccione al menos un registro.");return}
+  const lote=ids.slice(0,BORRADO_LOTE_MAX);
+  if(!confirm(`Seleccionados: ${ids.length}.\nSe eliminarán máximo ${lote.length} en este bloque.\n\n¿Continuar?`))return;
+  borrarIdsEnLote(lote,false);lote.forEach(id=>seleccionBorradoIds.delete(id));renderSeleccionBorrado();
+  alert(`Eliminados localmente: ${lote.length}. El envío remoto continuará en segundo plano.`);
+}
