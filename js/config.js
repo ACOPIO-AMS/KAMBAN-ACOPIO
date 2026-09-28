@@ -32,8 +32,8 @@ const UMBRALES_MINUTOS={
 
 
 const SYNC_REQUEST_TIMEOUT_MS=45000;
-const SYNC_RETRY_BASE_MS=8000;
-const SYNC_RETRY_MAX_MS=60000;
+const SYNC_RETRY_BASE_MS=16000;
+const SYNC_RETRY_MAX_MS=90000;
 const SYNC_BATCH_SIZE=2;
 // Con señal baja no se generan reintentos continuos: cada registro se envía al instante
 // y la cola pendiente se revisa cada minuto o apenas regresa la conexión.

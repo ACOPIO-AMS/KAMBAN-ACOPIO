@@ -1,19 +1,19 @@
-const CACHE = 'kamban-acopio-0002.9.10-cola-estable';
+const CACHE = 'kamban-acopio-0002.9.10-lote-ligero';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.9.10-cola-estable',
-  './js/config.js?v=0002.9.10-cola-estable',
-  './js/utilidades.js?v=0002.9.10-cola-estable',
-  './js/db.js?v=0002.9.10-cola-estable',
-  './js/reglas.js?v=0002.9.10-cola-estable',
-  './js/tiempos.js?v=0002.9.10-cola-estable',
-  './js/sincronizacion.js?v=0002.9.10-cola-estable',
-  './js/seguimiento.js?v=0002.9.10-cola-estable',
-  './js/admin.js?v=0002.9.10-cola-estable',
-  './js/app.js?v=0002.9.10-cola-estable',
+  './css/estilos.css?v=0002.9.10-lote-ligero',
+  './js/config.js?v=0002.9.10-lote-ligero',
+  './js/utilidades.js?v=0002.9.10-lote-ligero',
+  './js/db.js?v=0002.9.10-lote-ligero',
+  './js/reglas.js?v=0002.9.10-lote-ligero',
+  './js/tiempos.js?v=0002.9.10-lote-ligero',
+  './js/sincronizacion.js?v=0002.9.10-lote-ligero',
+  './js/seguimiento.js?v=0002.9.10-lote-ligero',
+  './js/admin.js?v=0002.9.10-lote-ligero',
+  './js/app.js?v=0002.9.10-lote-ligero',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

@@ -116,7 +116,12 @@ async function enviarYConfirmar(registro){
   return p;
 }
 
-function codificarLote(payloads){return btoa(unescape(encodeURIComponent(JSON.stringify(payloads)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+// Orden fijo: código, evento, fecha/hora, operario, estación, recurso, detalle, ID.
+// El backend sigue aceptando objetos de los celulares que aún no se actualizaron.
+function codificarLote(payloads){
+  const filas=payloads.map(p=>[p.codigo,p.evento,p.fecha_hora,p.operador,p.estacion,p.recurso,p.detalle,p.id]);
+  return btoa(unescape(encodeURIComponent(JSON.stringify(filas)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+}
 async function enviarLote(payloads){
   const r=await jsonpSeguro({action:"save_batch",lote:codificarLote(payloads)},SYNC_REQUEST_TIMEOUT_MS);
   if(!r||r.ok!==true)throw new Error(r&&r.error?r.error:"Apps Script rechazó el lote.");
@@ -130,7 +135,7 @@ function esperaReintento(n){
 function programarReintentoGlobal(delay=SYNC_RETRY_BASE_MS){
   clearTimeout(syncTimerReintento);
   if(!navigator.onLine)return;
-  syncTimerReintento=setTimeout(()=>procesarPendientesSync(false),delay);
+  syncTimerReintento=setTimeout(()=>procesarPendientesSync(false),delay+Math.floor(Math.random()*10000));
 }
 
 async function procesarPendientesSync(manual=false){
