@@ -67,11 +67,8 @@ function validarPayload(p){
     if(!p.operador)throw new Error("Falta operario en inventario.");
     return;
   }
-  // Descarguío en stock no tiene tolva por diseño; no debe bloquear la cola local.
-  const descarguioStock=p.estacion==="DESCARGUIO"&&["EN STOCK","SALIDA STOCK"].includes(p.evento);
-  if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso&&!descarguioStock){
-    throw new Error("Falta RECURSO en "+p.codigo+".");
-  }
+  // Los registros históricos y algunos eventos no tienen recurso. Se envían
+  // con la celda vacía; la captura nueva conserva sus reglas por estación.
 }
 
 function jsonpSeguro(params,timeout=SYNC_REQUEST_TIMEOUT_MS){
@@ -151,6 +148,10 @@ async function procesarPendientesSync(manual=false){
   if(syncProcesando)return;
   if(!endpoint()){if(manual)alert("Falta configurar la URL de Apps Script.");return}
   if(!navigator.onLine){if(manual)alert("Sin conexión. Los registros quedan guardados localmente.");return}
+
+  // Una validación antigua de RECURSO no debe dejar registros históricos bloqueados.
+  pendientesSyncOrdenados().filter(r=>r.sync_bloqueado&&/^Falta RECURSO\b/.test(r.sync_ultimo_error||""))
+    .forEach(r=>actualizarRegistro(String(r.id),{sync_bloqueado:false}));
 
   // Permite volver a probar registros observados en versiones anteriores.
   if(manual)pendientesSyncOrdenados().filter(r=>r.sync_bloqueado).forEach(r=>

@@ -1,4 +1,7 @@
 let registrando=false,timerCambioTurno=null,codigoBloqueado=false;
+const INVENTARIO_SERIE_KEY="kamban_inventario_serie";
+const INVENTARIO_CANCHA_KEY="kamban_inventario_cancha";
+const INVENTARIO_OPERADOR_KEY="kamban_inventario_operador";
 
 function normalizarRecurso(v){
   return String(v||"").trim().toUpperCase();
@@ -12,14 +15,23 @@ function turnoKey(fecha=new Date()){
 function cargarPreferencias(){
   $("estacion").value=localStorage.getItem("kamban_estacion")||"BALANZA";
   $("operador").value=localStorage.getItem("kamban_operador")||"";
+  $("inventarioSerie").value=localStorage.getItem(INVENTARIO_SERIE_KEY)||"";
+  $("inventarioCancha").value=localStorage.getItem(INVENTARIO_CANCHA_KEY)||"";
+  if($("estacion").value==="INVENTARIO")$("operador").value=localStorage.getItem(INVENTARIO_OPERADOR_KEY)||$("operador").value;
 }
 
 function guardarPreferencias(){
   localStorage.setItem("kamban_estacion",$("estacion").value);
   localStorage.setItem("kamban_operador",$("operador").value);
+  if($("estacion").value==="INVENTARIO"){
+    localStorage.setItem(INVENTARIO_SERIE_KEY,$("inventarioSerie").value.trim().toUpperCase());
+    localStorage.setItem(INVENTARIO_CANCHA_KEY,$("inventarioCancha").value.trim());
+    localStorage.setItem(INVENTARIO_OPERADOR_KEY,$("operador").value.trim());
+  }
 }
 
 function limpiarOperadorTurno(){
+  if($("estacion").value==="INVENTARIO")return;
   const claveActual=turnoKey();
   const claveGuardada=localStorage.getItem(LAST_TURN_CLEAR_KEY);
 
@@ -46,10 +58,9 @@ function programarLimpiezaCambioTurno(){
   }
 
   timerCambioTurno=setTimeout(()=>{
-    localStorage.removeItem("kamban_operador");
     localStorage.setItem(LAST_TURN_CLEAR_KEY,turnoKey());
-
-    if($("operador")){
+    if($("estacion").value!=="INVENTARIO"){
+      localStorage.removeItem("kamban_operador");
       $("operador").value="";
       $("operador").focus();
     }
@@ -142,6 +153,11 @@ function configurarCamposEspeciales(){
   mineralBox.classList.toggle("hide",estacion!=="BALANZA");
   canchaBox.classList.toggle("hide",estacion!=="MUESTREO");
   const esInventario=estacion==="INVENTARIO";
+  if(esInventario){
+    $("inventarioSerie").value=localStorage.getItem(INVENTARIO_SERIE_KEY)||"";
+    $("inventarioCancha").value=localStorage.getItem(INVENTARIO_CANCHA_KEY)||"";
+    $("operador").value=localStorage.getItem(INVENTARIO_OPERADOR_KEY)||$("operador").value;
+  }
   $("inventarioUbicacionBox").classList.toggle("hide",!esInventario);
   $("registrarInventarioBtn").classList.toggle("hide",!esInventario);
   $("codigoLabel").textContent=esInventario?"Código de inventario (letras y números)":"Código QR / digitado (5 números)";
@@ -272,8 +288,8 @@ function registrarInventario(){
     $("codigo").focus();return;
   }
   if(!operador){pedirDatoPendiente("Ingrese el operador.",$("operador"));return;}
-  if(!/^[A-Z]{1,3}$/.test(serie)){pedirDatoPendiente("Ingrese la serie de cancha (ejemplo A).",$("inventarioSerie"));return;}
-  if(!/^[1-9][0-9]?$/.test(cancha)){pedirDatoPendiente("Ingrese un número de cancha entre 1 y 99.",$("inventarioCancha"));return;}
+  if(!/^[ABC]$/.test(serie)){pedirDatoPendiente("Seleccione la serie de cancha: A, B o C.",$("inventarioSerie"));return;}
+  if(!/^[1-8]$/.test(cancha)){pedirDatoPendiente("Seleccione un número de cancha del 1 al 8.",$("inventarioCancha"));return;}
   const lote=codigo.slice(-5);
   const registro={id:uid(),codigo,evento:"LECTURA",fecha_hora:fechaHoraLocal(),operador,
     estacion:"INVENTARIO",recurso:`${serie}-${cancha}`,detalle:lote,
@@ -459,7 +475,7 @@ function render(){
   $("ultimoCodigo").textContent=
     ultimo?ultimo.codigo:"--";
   $("ultimoEvento").textContent=
-    ultimo?(ultimo.evento||"SIN EVENTO"):"--";
+    ultimo?(ultimo.estacion==="INVENTARIO"?(ultimo.detalle||String(ultimo.codigo||"").slice(-5)):(ultimo.evento||"SIN EVENTO")):"--";
   $("ultimoDetalle").textContent=
     ultimo
       ?`${ultimo.estacion}${recursoDetalle(ultimo)?" | "+recursoDetalle(ultimo):""} | ${ultimo.operador} | ${ultimo.fecha_hora}`
@@ -489,7 +505,7 @@ function render(){
 
     return `<tr>
       <td>${textoTabla(r.codigo)}</td>
-      <td>${textoTabla(r.evento||"")}</td>
+      <td>${textoTabla(r.estacion==="INVENTARIO"?(r.detalle||String(r.codigo||"").slice(-5)):(r.evento||""))}</td>
       <td>${textoTabla(r.fecha_hora)}</td>
       <td>${textoTabla(r.operador)}</td>
       <td>${textoTabla(r.estacion)}</td>
@@ -571,13 +587,15 @@ function iniciar(){
   });
 
   $("operador").addEventListener("input",guardarPreferencias);
+  $("inventarioSerie").addEventListener("change",guardarPreferencias);
+  $("inventarioCancha").addEventListener("change",guardarPreferencias);
   $("operador").addEventListener("change",completarRegistroPendiente);
   $("registrarInventarioBtn").onclick=registrarInventario;
 
   $("estacion").addEventListener("change",()=>{
     $("codigo").value="";
     reiniciarCapturaCodigo();
-    guardarPreferencias();
+    localStorage.setItem("kamban_estacion",$("estacion").value);
     configurarRecurso();
     configurarCamposEspeciales();
     configurarMotivoStock();

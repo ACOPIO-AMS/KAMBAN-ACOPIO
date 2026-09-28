@@ -2,7 +2,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>KANBAN</title><link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#001b2e"><meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="css/estilos.css?v=0002.9.10-inventario-tabla"><link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/estilos.css?v=0002.9.10-inventario-listas"><link rel="apple-touch-icon" href="icons/icon-192.png">
 
 <style>
 /* Estación y recurso/equipo en la misma fila */
@@ -55,7 +55,7 @@
   </div>
   <div id="inventarioUbicacionBox" class="campoEspecial hide">
     <label>Ubicación de cancha</label>
-    <div class="ubicacionMuestreoRow"><input id="inventarioSerie" maxlength="3" autocomplete="off" placeholder="Serie: A"><input id="inventarioCancha" inputmode="numeric" maxlength="2" autocomplete="off" placeholder="N°: 5"></div>
+    <div class="ubicacionMuestreoRow"><select id="inventarioSerie" aria-label="Serie de cancha"><option value="">Serie</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select><select id="inventarioCancha" aria-label="Número de cancha"><option value="">N°</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
     <div class="note">Ejemplo: serie A y cancha 5 → A-5.</div>
   </div>
 </div>
@@ -68,7 +68,7 @@
 <button class="fabTrack" id="seguimientoBtn" title="Reportes">📊</button><button class="fabAdmin" id="adminBtn">⚙</button>
 <div class="modal hide" id="seguimientoModal"><div class="modalBox wide"><div class="modalTop"><h3>REPORTES KANBAN</h3><button id="cerrarSeguimientoBtn" class="closeBtn">Cerrar</button></div><div id="fuenteSeguimiento" class="note"></div><div class="kpiGrid" id="kpiSeguimiento"></div><div class="trackFilters"><select id="filtroEstado"><option value="TODOS">TODOS</option><option value="EN PROCESO">EN PROCESO</option><option value="EN PARADA">EN PARADA</option><option value="EN STOCK">EN STOCK</option><option value="DEMORA">DEMORA</option><option value="FINALIZADO">FINALIZADO</option></select><button id="actualizarSeguimientoBtn">ACTUALIZAR</button></div><div id="kanban" class="kanbanWrap"></div></div></div>
 <div class="modal hide" id="adminModal"><div class="modalBox wide"><div class="modalTop"><h3>Administrador</h3><button id="cerrarAdminBtn" class="closeBtn">Cerrar</button></div><div id="adminInfo" class="note"></div><button id="configurarEquipoBtn" class="info">IDENTIFICAR ESTA PC / CELULAR</button><button id="probarSyncBtn">PROBAR RED Y SINCRONIZACIÓN</button><h3 class="controlTitulo">CONTROL DE EQUIPOS</h3><div class="note">Cada equipo reporta su estado al abrir la app y cada minuto mientras tiene conexión.</div><button id="actualizarControlBtn" class="info">ACTUALIZAR ESTADO DE EQUIPOS</button><div id="controlDispositivos"></div><button id="exportarBtn" class="warning">EXPORTAR RESPALDO CSV</button><button id="borrarAnterioresBtn" class="danger">BORRAR ANTERIORES FINALIZADOS</button><button id="borrarSeleccionadosBtn" class="info">BUSCAR Y BORRAR REGISTROS</button><div class="note">Limpieza automática: finalizados sincronizados con más de 20 días, máximo 50 por ejecución.</div><div id="seleccionBox" class="hide"><div class="filtrosBorrado"><input id="filtroBorrarTexto" type="search" placeholder="Buscar código, evento, operador o fecha"><select id="filtroBorrarEstacion"><option value="">TODAS LAS ESTACIONES</option><option>BALANZA</option><option>DESCARGUIO</option><option>CHANCADO</option><option>MUESTREO</option><option>SECADO</option><option>PULVERIZADO</option><option>CUARTEOSELLADO</option><option>ATENCION AL CLIENTE</option><option>INVENTARIO</option></select></div><div class="seleccionSticky"><label><input type="checkbox" id="seleccionarTodos"> Seleccionar visibles</label><div id="resumenBorrado" class="note"></div><button id="confirmarSeleccionBtn" class="danger">CONFIRMAR BORRADO SELECCIONADOS</button></div><div class="tableWrap" id="tablaSeleccion"></div></div></div></div>
-<script src="js/config.js?v=0002.9.10-inventario-tabla"></script><script src="js/utilidades.js?v=0002.9.10-inventario-tabla"></script><script src="js/db.js?v=0002.9.10-inventario-tabla"></script><script src="js/reglas.js?v=0002.9.10-inventario-tabla"></script><script src="js/tiempos.js?v=0002.9.10-inventario-tabla"></script><script src="js/sincronizacion.js?v=0002.9.10-inventario-tabla"></script><script src="js/seguimiento.js?v=0002.9.10-inventario-tabla"></script><script src="js/admin.js?v=0002.9.10-inventario-tabla"></script><script src="js/app.js?v=0002.9.10-inventario-tabla"></script>
+<script src="js/config.js?v=0002.9.10-inventario-listas"></script><script src="js/utilidades.js?v=0002.9.10-inventario-listas"></script><script src="js/db.js?v=0002.9.10-inventario-listas"></script><script src="js/reglas.js?v=0002.9.10-inventario-listas"></script><script src="js/tiempos.js?v=0002.9.10-inventario-listas"></script><script src="js/sincronizacion.js?v=0002.9.10-inventario-listas"></script><script src="js/seguimiento.js?v=0002.9.10-inventario-listas"></script><script src="js/admin.js?v=0002.9.10-inventario-listas"></script><script src="js/app.js?v=0002.9.10-inventario-listas"></script>
 <script>
 window.addEventListener("online",()=>document.body.classList.remove("offline"));
 window.addEventListener("offline",()=>document.body.classList.add("offline"));
@@ -86,7 +86,7 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
       const registro=await navigator.serviceWorker.register(
-        "./service-worker.js?v=0002.9.10-inventario-tabla",
+        "./service-worker.js?v=0002.9.10-inventario-listas",
         {updateViaCache:"none"}
       );
       await registro.update();
