@@ -10,18 +10,68 @@
 var KA_SPREADSHEET_ID="1Hx4fLIcN2mC-JKlzOUd3Ntm7Wm_pH4njX5uPvBxglz0";
 var KA_VERSION="0002.9.0";
 var KA_REVISION="0002.9.10";
-var KA_BUILD="lote-ligero-3";
+var KA_BUILD="inventario-tabla-4";
 var KA_HOJAS=["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO","CUARTEOSELLADO","ATENCION AL CLIENTE"];
+var KA_INV_COLUMNAS=["CODIGO","N° LOTE","FECHA Y HORA","RECURSO","OPERARIO","ID REGISTRO"];
 var KA_COLUMNAS=["CODIGO","EVENTO","FECHA Y HORA","OPERARIO","ESTACION","RECURSO","ID REGISTRO","DETALLE","ESPERA","PARADAS","PROCESO EFECTIVO","PERMANENCIA"];
 var KA_CONTROL_HOJA="CONTROL DISPOSITIVOS";
 var KA_CONTROL_COLUMNAS=["ID DISPOSITIVO","EQUIPO","AREA","VERSION APP","ULTIMA CONEXION","PENDIENTES","ULTIMO ERROR","ULTIMA SINCRONIZACION","ESTADO"];
 
-function doGet(e){var cb="";try{var p=e&&e.parameter?e.parameter:{};cb=kaTexto(p.callback);var a=kaTexto(p.action||"ping").toLowerCase();if(a==="ping")return kaSalida({ok:true,sistema:"KANBAN",version:KA_VERSION,revision:KA_REVISION,build:KA_BUILD,tiempos_base:true},cb);if(a==="heartbeat"){var hb=kaRegistrarDispositivo(p);return kaSalida({ok:true,version:KA_VERSION,data:hb},cb);}if(a==="devices")return kaSalida({ok:true,version:KA_VERSION,data:kaListarDispositivos()},cb);if(a==="save_batch")return kaSalida({ok:true,version:KA_VERSION,data:kaGuardarLote(kaDecodificarLote(p.lote))},cb);if(a==="delete"){var x=kaEliminar(p);return kaSalida({ok:true,version:KA_VERSION,result:x.result,id:x.id},cb);}if(a==="save"){var s=kaGuardar(kaParametrosARegistro(p));return kaSalida({ok:true,version:KA_VERSION,result:s.result,id:s.data.id,recurso:s.data.recurso,data:s.data},cb);}if(a==="kanban"){var k=kaListarKanban();return kaSalida({ok:true,version:KA_VERSION,data:k.data,meta:k.meta},cb);}
+function doGet(e){var cb="";try{var p=e&&e.parameter?e.parameter:{};cb=kaTexto(p.callback);var a=kaTexto(p.action||"ping").toLowerCase();if(a==="ping")return kaSalida({ok:true,sistema:"KANBAN",version:KA_VERSION,revision:KA_REVISION,build:KA_BUILD,tiempos_base:true,inventario:true},cb);if(a==="heartbeat"){var hb=kaRegistrarDispositivo(p);return kaSalida({ok:true,version:KA_VERSION,data:hb},cb);}if(a==="devices")return kaSalida({ok:true,version:KA_VERSION,data:kaListarDispositivos()},cb);if(a==="save_batch")return kaSalida({ok:true,version:KA_VERSION,data:kaGuardarLote(kaDecodificarLote(p.lote))},cb);if(a==="delete"){var x=kaEliminar(p);return kaSalida({ok:true,version:KA_VERSION,result:x.result,id:x.id},cb);}if(a==="save"){var s=kaGuardar(kaParametrosARegistro(p));return kaSalida({ok:true,version:KA_VERSION,result:s.result,id:s.data.id,recurso:s.data.recurso,data:s.data},cb);}if(a==="kanban"){var k=kaListarKanban();return kaSalida({ok:true,version:KA_VERSION,data:k.data,meta:k.meta},cb);}
 if(a==="list")return kaSalida({ok:true,version:KA_VERSION,data:kaListar()},cb);return kaSalida({ok:false,version:KA_VERSION,error:"Acción no reconocida: "+a},cb);}catch(error){return kaSalida({ok:false,version:KA_VERSION,error:kaError(error)},cb);}}
 function doPost(e){try{if(!e||!e.postData||!e.postData.contents)throw new Error("POST sin contenido.");var s=kaGuardar(JSON.parse(e.postData.contents));return kaSalida({ok:true,version:KA_VERSION,result:s.result,id:s.data.id,recurso:s.data.recurso,data:s.data},"");}catch(error){return kaSalida({ok:false,version:KA_VERSION,error:kaError(error)},"");}}
 function kaParametrosARegistro(p){return {codigo:p.codigo,evento:p.evento,fecha_hora:p.fecha_hora,operador:p.operador,estacion:p.estacion,recurso:p.recurso,detalle:p.detalle,tipo_mineral:p.tipo_mineral,ubicacion:p.ubicacion,id:p.id,eliminado:kaTexto(p.eliminado).toLowerCase()==="true",tolva:p.tolva,circuito:p.circuito,horno:p.horno,molino:p.molino};}
 function kaDecodificarLote(texto){var t=kaTexto(texto);if(!t)throw new Error("Lote vacío.");var json=Utilities.newBlob(Utilities.base64DecodeWebSafe(t)).getDataAsString("UTF-8"),lote=JSON.parse(json);if(!Array.isArray(lote)||!lote.length)throw new Error("Lote inválido.");if(lote.length>10)throw new Error("Lote excede el máximo permitido.");return lote.map(function(r){if(!Array.isArray(r))return r;if(r.length!==8)throw new Error("Registro compacto inválido.");return{codigo:r[0],evento:r[1],fecha_hora:r[2],operador:r[3],estacion:r[4],recurso:r[5],detalle:r[6],id:r[7]};});}
 function kaLibro(){return SpreadsheetApp.openById(KA_SPREADSHEET_ID)}
+function kaTablaInventario(){
+  var libro=kaLibro(),hoja=libro.getSheetByName("INVENTARIO");
+  if(!hoja)hoja=libro.insertSheet("INVENTARIO");
+  var ultima=hoja.getLastRow(),encabezado=0;
+  if(ultima>=1){
+    var cab=hoja.getRange(1,1,Math.min(10,ultima),6).getDisplayValues();
+    cab.forEach(function(r,i){
+      var v=r.map(kaEstacion);
+      if(v[0]==="CODIGO"&&v[1].indexOf("LOTE")>=0&&v[2].indexOf("FECHA")>=0&&
+        v[3]==="RECURSO"&&v[4]==="OPERARIO"&&v[5].indexOf("ID REGIST")===0)encabezado=i+1;
+    });
+  }
+  if(!encabezado){
+    if(ultima>0)throw new Error("INVENTARIO: no se encontró la tabla A:F (CODIGO, N° LOTE, FECHA Y HORA, RECURSO, OPERARIO, ID REGISTRO). No se escribió nada.");
+    if(hoja.getMaxColumns()<6)hoja.insertColumnsAfter(hoja.getMaxColumns(),6-hoja.getMaxColumns());
+    hoja.getRange(1,1,1,6).setValues([KA_INV_COLUMNAS]);
+    encabezado=1;
+  }
+  return{hoja:hoja,encabezado:encabezado};
+}
+function kaFilaInventario(tabla,id){
+  var h=tabla.hoja,n=h.getLastRow(),desde=tabla.encabezado+1;if(n<desde)return-1;
+  var f=h.getRange(desde,6,n-desde+1,1).createTextFinder(id).matchEntireCell(true).findNext();
+  return f?f.getRow():-1;
+}
+function kaBorrarInventario(id){
+  var tabla=kaTablaInventario(),fila=kaFilaInventario(tabla,id);
+  if(fila>0)tabla.hoja.getRange(fila,1,1,6).setValues([Array(6).fill("")]);
+  return{result:fila>0?"ELIMINADO":"NO ENCONTRADO",id:id};
+}
+function kaGuardarInventarioGrupo(items,resultados){
+  var tabla=kaTablaInventario(),h=tabla.hoja,n=h.getLastRow(),desde=tabla.encabezado+1,
+    ids=n>=desde?h.getRange(desde,6,n-desde+1,1).getDisplayValues():[],
+    existentes=Object.create(null),siguiente=Math.max(desde,n+1);
+  ids.forEach(function(r){var id=kaTexto(r[0]);if(id)existentes[id]=true;});
+  var nuevos=[];
+  items.forEach(function(item){
+    var d=item.dato;
+    if(existentes[d.id]){resultados[item.indice]={ok:true,id:d.id,recurso:d.recurso,result:"YA REGISTRADO"};return;}
+    existentes[d.id]=true;
+    nuevos.push([d.codigo,d.codigo.slice(-5),d.fecha_hora,d.recurso,d.operador,d.id]);
+    resultados[item.indice]={ok:true,id:d.id,recurso:d.recurso,result:"OK"};
+  });
+  if(nuevos.length){
+    h.getRange(siguiente,1,nuevos.length,2).setNumberFormat("@");
+    h.getRange(siguiente,6,nuevos.length,1).setNumberFormat("@");
+    h.getRange(siguiente,1,nuevos.length,6).setValues(nuevos);
+  }
+}
 function kaColumnaTiempos(hoja){
   var ultima=Math.max(8,hoja.getLastColumn()),nombres=KA_COLUMNAS.slice(8),
     cab=ultima>=9?hoja.getRange(1,9,1,ultima-8).getDisplayValues()[0]:[];
@@ -51,11 +101,28 @@ function kaHojaControl(){var libro=kaLibro(),hoja=libro.getSheetByName(KA_CONTRO
 function kaFilaDispositivo(hoja,id){var n=hoja.getLastRow();if(n<2||!id)return-1;var f=hoja.getRange(2,1,n-1,1).createTextFinder(id).matchEntireCell(true).findNext();return f?f.getRow():-1;}
 function kaRegistrarDispositivo(p){var id=kaTexto(p.dispositivo_id),equipo=kaTexto(p.equipo).toUpperCase(),area=kaEstacion(p.area),version=kaTexto(p.frontend_version),pendientes=Math.max(0,Number(p.pendientes||0)),error=kaTexto(p.ultimo_error),ultimaSync=kaTexto(p.ultima_sync),estado=kaTexto(p.estado).toUpperCase();if(!id)throw new Error("Dispositivo sin ID.");var lock=LockService.getUserLock();if(!lock.tryLock(3000))throw new Error("Control ocupado.");try{var h=kaHojaControl(),fila=kaFilaDispositivo(h,id);if(fila<0)fila=Math.max(2,h.getLastRow()+1);h.getRange(fila,1,1,KA_CONTROL_COLUMNAS.length).setValues([[id,equipo||"EQUIPO SIN NOMBRE",area,version,new Date(),pendientes,error,ultimaSync,estado||"ONLINE"]]);h.getRange(fila,5).setNumberFormat("yyyy-MM-dd HH:mm:ss");return{id:id,equipo:equipo,pendientes:pendientes};}finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}}
 function kaListarDispositivos(){var h=kaLibro().getSheetByName(KA_CONTROL_HOJA);if(!h||h.getLastRow()<2)return[];var v=h.getRange(2,1,h.getLastRow()-1,KA_CONTROL_COLUMNAS.length).getDisplayValues(),out=[];for(var i=0;i<v.length;i++){var r=v[i];if(!kaTexto(r[0]))continue;out.push({id:r[0],equipo:r[1],area:r[2],version:r[3],ultima_conexion:r[4],pendientes:r[5],ultimo_error:r[6],ultima_sync:r[7],estado:r[8]});}out.sort(function(a,b){return String(b.ultima_conexion).localeCompare(String(a.ultima_conexion));});return out;}
-function kaEliminar(r){var estacion=kaEstacion(r.estacion),id=kaTexto(r.id);if(KA_HOJAS.indexOf(estacion)===-1)throw new Error("Estación inválida.");if(!id)throw new Error("ID vacío.");var lock=LockService.getScriptLock();if(!lock.tryLock(1500))throw new Error("Base ocupada.");try{var hoja=kaHoja(estacion),fila=kaBuscarFilaRecientePorId(hoja,id,1000);if(fila<0)fila=kaBuscarFilaPorIdCompleta(hoja,id);if(fila>0){var codigo=kaTexto(hoja.getRange(fila,1).getDisplayValue());hoja.deleteRow(fila);if(codigo)kaActualizarTiemposCodigo(hoja,codigo);}return{result:fila>0?"ELIMINADO":"NO ENCONTRADO",id:id};}finally{lock.releaseLock();}}
+function kaEliminar(r){
+  var estacion=kaEstacion(r.estacion),id=kaTexto(r.id);
+  if(KA_HOJAS.indexOf(estacion)===-1&&estacion!=="INVENTARIO")throw new Error("Estación inválida.");
+  if(!id)throw new Error("ID vacío.");
+  var lock=LockService.getScriptLock();if(!lock.tryLock(1500))throw new Error("Base ocupada.");
+  try{
+    if(estacion==="INVENTARIO")return kaBorrarInventario(id);
+    var hoja=kaHoja(estacion),fila=kaBuscarFilaRecientePorId(hoja,id,1000);
+    if(fila<0)fila=kaBuscarFilaPorIdCompleta(hoja,id);
+    if(fila>0){var codigo=kaTexto(hoja.getRange(fila,1).getDisplayValue());hoja.deleteRow(fila);if(codigo)kaActualizarTiemposCodigo(hoja,codigo);}
+    return{result:fila>0?"ELIMINADO":"NO ENCONTRADO",id:id};
+  }finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
+}
 function kaGuardar(registro){
   var d=kaNormalizarRegistro(registro),lock=LockService.getScriptLock();
   if(!lock.tryLock(5000))throw new Error("La base está ocupada. El registro será reintentado.");
   try{
+    if(d.estacion==="INVENTARIO"){
+      if(d.eliminado){var borrado=kaBorrarInventario(d.id);return{result:borrado.result,data:{id:d.id,recurso:d.recurso}};}
+      var resultado=[];kaGuardarInventarioGrupo([{indice:0,dato:d}],resultado);
+      return{result:resultado[0].result,data:{id:d.id,recurso:d.recurso}};
+    }
     var hoja=kaHoja(d.estacion),cache=CacheService.getScriptCache(),
       cacheKey="id_"+Utilities.base64EncodeWebSafe(d.estacion+"|"+d.id).substring(0,220),
       fila=kaBuscarFilaRecientePorId(hoja,d.id,1000);
@@ -76,7 +143,7 @@ function kaGuardar(registro){
     kaActualizarTiemposCodigo(hoja,d.codigo);
     cache.put(cacheKey,"1",21600);
     return{result:"OK",data:{id:d.id,recurso:d.recurso}};
-  }finally{lock.releaseLock();}
+  }finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
 }
 function kaGuardarLote(lote){
   var resultados=new Array(lote.length),grupos={};
@@ -91,6 +158,7 @@ function kaGuardarLote(lote){
   if(!lock.tryLock(15000))throw new Error("Base ocupada. El lote será reintentado.");
   try{
     Object.keys(grupos).forEach(function(estacion){
+      if(estacion==="INVENTARIO"){kaGuardarInventarioGrupo(grupos[estacion],resultados);return;}
       var h=kaHoja(estacion),n=h.getLastRow(),existentes=Object.create(null);
       if(n>=2){
         var inicio=Math.max(2,n-999);
@@ -134,7 +202,7 @@ function kaGuardarLote(lote){
     return resultados;
   }finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
 }
-function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1)throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");var descarguioStock=d.estacion==="DESCARGUIO"&&(d.evento==="EN STOCK"||d.evento==="SALIDA STOCK");if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].indexOf(d.estacion)>=0&&!d.recurso&&!descarguioStock)throw new Error("RECURSO vacío para "+d.estacion+".");return d;}
+function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1&&e!=="INVENTARIO")throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");if(e==="INVENTARIO"){if(d.evento!=="LECTURA")throw new Error("Evento de inventario inválido.");if(!/^[A-Za-z0-9]{6,80}$/.test(d.codigo))throw new Error("Código de inventario inválido.");if(!/^[A-Z]{1,3}-[1-9][0-9]?$/.test(d.recurso))throw new Error("Ubicación de cancha inválida.");if(!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(d.fecha_hora))throw new Error("Fecha u hora inválida.");if(!d.operador)throw new Error("Operario vacío.");return d;}var descarguioStock=d.estacion==="DESCARGUIO"&&(d.evento==="EN STOCK"||d.evento==="SALIDA STOCK");if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].indexOf(d.estacion)>=0&&!d.recurso&&!descarguioStock)throw new Error("RECURSO vacío para "+d.estacion+".");return d;}
 function kaRecurso(r){var e=kaEstacion(r.estacion),x=kaTexto(r.recurso).toUpperCase();if(x)return x;if(e==="BALANZA"&&kaTexto(r.tipo_mineral))return kaTexto(r.tipo_mineral).toUpperCase();if(e==="MUESTREO"&&kaTexto(r.ubicacion))return kaTexto(r.ubicacion).toUpperCase();if(e==="DESCARGUIO"&&kaTexto(r.tolva))return"T"+kaTexto(r.tolva).replace(/^T/i,"");if(e==="CHANCADO"&&kaTexto(r.circuito))return"C"+kaTexto(r.circuito).replace(/^C/i,"");if(e==="SECADO"&&kaTexto(r.horno))return"H"+kaTexto(r.horno).replace(/^H/i,"");if(e==="PULVERIZADO"&&kaTexto(r.molino))return"M"+kaTexto(r.molino).replace(/^M/i,"");return"";}
 function kaBuscarFilaRecientePorId(hoja,id,maxFilas){var n=hoja.getLastRow();if(!id||n<2)return-1;var inicio=Math.max(2,n-Math.max(1,Number(maxFilas||1000))+1);var valores=hoja.getRange(inicio,7,n-inicio+1,1).getDisplayValues();for(var i=valores.length-1;i>=0;i--){if(kaTexto(valores[i][0])===id)return inicio+i;}return-1;}
 function kaBuscarFilaPorIdCompleta(hoja,id){var n=hoja.getLastRow();if(!id||n<2)return-1;var f=hoja.getRange(2,7,n-1,1).createTextFinder(id).matchEntireCell(true).findNext();return f?f.getRow():-1;}
@@ -233,7 +301,7 @@ function kaTexto(v){return String(v===null||v===undefined?"":v).trim()}
 function kaEstacion(v){return kaTexto(v).toUpperCase().replace(/[ÁÀÄÂ]/g,"A").replace(/[ÉÈËÊ]/g,"E").replace(/[ÍÌÏÎ]/g,"I").replace(/[ÓÒÖÔ]/g,"O").replace(/[ÚÙÜÛ]/g,"U").replace(/Ñ/g,"N")}
 function kaError(e){return String(e&&e.message?e.message:e)}
 function kaSalida(o,cb){var j=JSON.stringify(o);if(cb&&/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(cb))return ContentService.createTextOutput(cb+"("+j+");").setMimeType(ContentService.MimeType.JAVASCRIPT);return ContentService.createTextOutput(j).setMimeType(ContentService.MimeType.JSON);}
-function PRUEBA_PING_TIEMPOS_BASE(){return{ok:true,sistema:"KANBAN",version:KA_VERSION,revision:KA_REVISION,build:KA_BUILD,tiempos_base:true}}
+function PRUEBA_PING_TIEMPOS_BASE(){return{ok:true,sistema:"KANBAN",version:KA_VERSION,revision:KA_REVISION,build:KA_BUILD,tiempos_base:true,inventario:true}}
 
 // I:L se completan en la fila FINAL. Se recalculan al llegar eventos tardíos del mismo código.
 function kaMarcaTiempo(v){

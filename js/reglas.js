@@ -111,6 +111,7 @@ function validarSecuencia(codigo,estacion,evento,recurso){
 
 function estadoRegistro(r){
   const ev=String(r.evento||"").toUpperCase();
+  if(r.estacion==="INVENTARIO"&&ev==="LECTURA")return["INVENTARIADO","bInfo"];
   if(ev==="PARADA")return["PARADA","bStop"];
   if(ev==="REINICIO")return["REINICIO","bInfo"];
   if(ev==="EN STOCK")return["EN STOCK","bStock"];
@@ -123,19 +124,21 @@ function estadoRegistro(r){
 
 function pendientesPorFinalizar(){
   const grupos={};
-  datos().filter(r=>!r.eliminado).forEach(r=>{
+  datos().filter(r=>!r.eliminado&&r.estacion!=="INVENTARIO").forEach(r=>{
     if(!r.codigo||!r.estacion)return;
     const key=r.estacion+"||"+r.codigo;
-    if(!grupos[key])grupos[key]={codigo:r.codigo,estacion:r.estacion,eventos:{},ultimo:"",ultimoEvento:""};
+    if(!grupos[key])grupos[key]={codigo:r.codigo,estacion:r.estacion,recurso:"",eventos:{},ultimo:"",ultimoEvento:""};
     const ev=String(r.evento||"").toUpperCase();
     if(ev&&ev!=="SIN EVENTO"){
       grupos[key].eventos[ev]=true;
       if(!grupos[key].ultimo||r.fecha_hora>grupos[key].ultimo){
         grupos[key].ultimo=r.fecha_hora;
         grupos[key].ultimoEvento=ev;
+        grupos[key].recurso=recursoDetalle(r)||grupos[key].recurso;
       }
     }else if(!grupos[key].ultimo||r.fecha_hora>grupos[key].ultimo){
       grupos[key].ultimo=r.fecha_hora;
+      grupos[key].recurso=recursoDetalle(r)||grupos[key].recurso;
     }
   });
 

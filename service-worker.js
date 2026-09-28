@@ -1,19 +1,19 @@
-const CACHE = 'kamban-acopio-0002.9.10-lote-ligero';
+const CACHE = 'kamban-acopio-0002.9.10-inventario-tabla';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.9.10-lote-ligero',
-  './js/config.js?v=0002.9.10-lote-ligero',
-  './js/utilidades.js?v=0002.9.10-lote-ligero',
-  './js/db.js?v=0002.9.10-lote-ligero',
-  './js/reglas.js?v=0002.9.10-lote-ligero',
-  './js/tiempos.js?v=0002.9.10-lote-ligero',
-  './js/sincronizacion.js?v=0002.9.10-lote-ligero',
-  './js/seguimiento.js?v=0002.9.10-lote-ligero',
-  './js/admin.js?v=0002.9.10-lote-ligero',
-  './js/app.js?v=0002.9.10-lote-ligero',
+  './css/estilos.css?v=0002.9.10-inventario-tabla',
+  './js/config.js?v=0002.9.10-inventario-tabla',
+  './js/utilidades.js?v=0002.9.10-inventario-tabla',
+  './js/db.js?v=0002.9.10-inventario-tabla',
+  './js/reglas.js?v=0002.9.10-inventario-tabla',
+  './js/tiempos.js?v=0002.9.10-inventario-tabla',
+  './js/sincronizacion.js?v=0002.9.10-inventario-tabla',
+  './js/seguimiento.js?v=0002.9.10-inventario-tabla',
+  './js/admin.js?v=0002.9.10-inventario-tabla',
+  './js/app.js?v=0002.9.10-inventario-tabla',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

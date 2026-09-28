@@ -1,6 +1,6 @@
 /* KANBAN 0002.9.10 - SINCRONIZACIÓN Y DIAGNÓSTICO */
 let syncProcesando=false,syncTimerPeriodico=null,syncTimerReintento=null,syncBackendVerificadoEn=0;
-let syncUltimoError="";
+let syncUltimoError="",syncBackendBuild="",syncBackendInventarioVerificado=false;
 const syncEnCurso=new Set();
 let borradoSyncProcesando=false;
 let dispositivoUltimoReporte=0,dispositivoReporteEnCurso=false;
@@ -60,6 +60,13 @@ function validarPayload(p){
   if(!p.id)throw new Error("Registro sin ID.");
   if(!p.codigo)throw new Error("Registro sin código.");
   if(!p.estacion)throw new Error("Registro sin estación.");
+  if(p.estacion==="INVENTARIO"){
+    if(p.evento!=="LECTURA")throw new Error("Evento de inventario inválido.");
+    if(!/^[A-Za-z0-9]{6,80}$/.test(p.codigo))throw new Error("Código de inventario inválido.");
+    if(!/^[A-Z]{1,3}-[1-9][0-9]?$/.test(p.recurso))throw new Error("Ubicación de inventario inválida.");
+    if(!p.operador)throw new Error("Falta operario en inventario.");
+    return;
+  }
   // Descarguío en stock no tiene tolva por diseño; no debe bloquear la cola local.
   const descarguioStock=p.estacion==="DESCARGUIO"&&["EN STOCK","SALIDA STOCK"].includes(p.evento);
   if(["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO"].includes(p.estacion)&&!p.recurso&&!descarguioStock){
@@ -99,6 +106,8 @@ async function verificarBackend(forzar=false){
   }
   if(r.tiempos_base!==true)
     throw new Error("El servidor publicado no confirma el guardado de tiempos (tiempos_base: true). Respuesta: versión "+String(r.version||"sin versión")+", revisión "+String(r.revision||"sin revisión")+". Revise la implementación de Apps Script.");
+  syncBackendBuild=String(r.build||r.revision||"sin compilación");
+  syncBackendInventarioVerificado=r.inventario===true;
   syncBackendVerificadoEn=now;
   return true;
 }
@@ -161,6 +170,8 @@ async function procesarPendientesSync(manual=false){
         .filter(r=>!syncEnCurso.has(String(r.id))&&!r.sync_bloqueado&&!intentados.has(String(r.id)))
         .slice(0,SYNC_BATCH_SIZE);
       if(!candidatos.length)break;
+      if(candidatos.some(r=>r.estacion==="INVENTARIO")&&!syncBackendInventarioVerificado)
+        throw new Error("El backend publicado aún no admite INVENTARIO. Actualice Apps Script; los registros quedan guardados localmente.");
       candidatos.forEach(r=>intentados.add(String(r.id)));
 
       const payloads=[];

@@ -123,7 +123,9 @@ function reiniciarCapturaCodigo(){
 function rechazarEntradaCodigo(e){
   if(e&&e.preventDefault)e.preventDefault();
   codigoBloqueado=true;
-  setEstado("Solo se permiten 5 dígitos numéricos. Borre y vuelva a ingresar el código.");
+  setEstado($("estacion").value==="INVENTARIO"
+    ?"Inventario: solo letras y números, entre 6 y 80 caracteres. Corrija el código."
+    :"Solo se permiten 5 dígitos numéricos. Borre y vuelva a ingresar el código.");
 }
 
 function codigoTrasInsercion(entrada){
@@ -139,6 +141,13 @@ function configurarCamposEspeciales(){
   const stockBox=$("motivoStockBox");
   mineralBox.classList.toggle("hide",estacion!=="BALANZA");
   canchaBox.classList.toggle("hide",estacion!=="MUESTREO");
+  const esInventario=estacion==="INVENTARIO";
+  $("inventarioUbicacionBox").classList.toggle("hide",!esInventario);
+  $("registrarInventarioBtn").classList.toggle("hide",!esInventario);
+  $("codigoLabel").textContent=esInventario?"Código de inventario (letras y números)":"Código QR / digitado (5 números)";
+  $("codigo").inputMode=esInventario?"text":"numeric";
+  $("codigo").maxLength=esInventario?80:5;
+  $("codigo").pattern=esInventario?"[A-Za-z0-9]{6,80}":"[0-9]{5}";
   stockBox.classList.add("hide");
   if(estacion!=="BALANZA")$("tipoMineral").value="";
   if(estacion!=="BALANZA")$("estadoMineral").value="";
@@ -253,8 +262,35 @@ function completarRegistroPendiente(){
   if(!codigoBloqueado&&/^\d{5}$/.test($("codigo").value)&&!registrando)registrar();
 }
 
+function registrarInventario(){
+  if(registrando)return;
+  const codigo=$("codigo").value.trim(),operador=$("operador").value.trim();
+  const serie=$("inventarioSerie").value.trim().toUpperCase();
+  const cancha=$("inventarioCancha").value.trim();
+  if(!/^[A-Za-z0-9]{6,80}$/.test(codigo)){
+    setEstado("Inventario: el código debe tener entre 6 y 80 letras o números.");
+    $("codigo").focus();return;
+  }
+  if(!operador){pedirDatoPendiente("Ingrese el operador.",$("operador"));return;}
+  if(!/^[A-Z]{1,3}$/.test(serie)){pedirDatoPendiente("Ingrese la serie de cancha (ejemplo A).",$("inventarioSerie"));return;}
+  if(!/^[1-9][0-9]?$/.test(cancha)){pedirDatoPendiente("Ingrese un número de cancha entre 1 y 99.",$("inventarioCancha"));return;}
+  const lote=codigo.slice(-5);
+  const registro={id:uid(),codigo,evento:"LECTURA",fecha_hora:fechaHoraLocal(),operador,
+    estacion:"INVENTARIO",recurso:`${serie}-${cancha}`,detalle:lote,
+    serie,cancha,sincronizado:false,eliminado:false,version:APP_VERSION};
+  registrando=true;
+  try{agregarRegistro(registro)}catch(error){
+    registrando=false;pedirDatoPendiente("No se pudo guardar en este dispositivo: "+String(error.message||error),$("codigo"));return;
+  }
+  guardarPreferencias();
+  $("codigo").value="";reiniciarCapturaCodigo();registrando=false;
+  render();setEstado(`Inventario guardado: lote ${lote} | cancha ${serie}-${cancha}. Pendiente de confirmación en la base.`);
+  beepOk();sincronizarRegistroInmediato(registro);enfocarCodigo();
+}
+
 function registrar(){
   if(registrando)return;
+  if($("estacion").value==="INVENTARIO"){registrarInventario();return;}
 
   const codigo=$("codigo").value.trim();
   const estacion=$("estacion").value;
@@ -438,9 +474,9 @@ function render(){
 
   $("pendientesTabla").innerHTML=
     pendientes.length
-      ?"<table><tr><th>Código</th><th>Estación</th><th>Falta</th><th>Hora</th></tr>"+
+      ?"<table><tr><th>Código</th><th>Estación</th><th>Recurso</th><th>Falta</th><th>Hora</th></tr>"+
        pendientes.map(x=>
-         `<tr><td>${textoTabla(x.codigo)}</td><td>${textoTabla(x.estacion)}</td><td><span class="estadoBadge ${x.clase}">${textoTabla(x.falta)}</span></td><td>${textoTabla(horaCorta(x.ultimo))}</td></tr>`
+         `<tr><td>${textoTabla(x.codigo)}</td><td>${textoTabla(x.estacion)}</td><td>${textoTabla(x.recurso||"—")}</td><td><span class="estadoBadge ${x.clase}">${textoTabla(x.falta)}</span></td><td>${textoTabla(horaCorta(x.ultimo))}</td></tr>`
        ).join("")+
        "</table>"
       :"";
@@ -493,22 +529,30 @@ function iniciar(){
     if(e.key==="Enter"){
       e.preventDefault();
       if(codigoBloqueado)return;
+      if($("estacion").value==="INVENTARIO"){registrarInventario();return;}
       if(/^\d{5}$/.test($("codigo").value))registrar();
     }
   });
 
   $("codigo").addEventListener("beforeinput",e=>{
     if(!e.inputType||!e.inputType.startsWith("insert")||e.inputType==="insertFromPaste")return;
-    if(e.data!=null&&!/^\d{0,5}$/.test(codigoTrasInsercion(e.data)))rechazarEntradaCodigo(e);
+    const proximo=codigoTrasInsercion(e.data||"");
+    if(e.data!=null&&!($("estacion").value==="INVENTARIO"?/^[A-Za-z0-9]{0,80}$/:/^\d{0,5}$/).test(proximo))rechazarEntradaCodigo(e);
   });
 
   $("codigo").addEventListener("paste",e=>{
     const texto=e.clipboardData&&e.clipboardData.getData("text");
-    if(texto!=null&&!/^\d{0,5}$/.test(codigoTrasInsercion(texto)))rechazarEntradaCodigo(e);
+    if(texto!=null&&!($("estacion").value==="INVENTARIO"?/^[A-Za-z0-9]{0,80}$/:/^\d{0,5}$/).test(codigoTrasInsercion(texto)))rechazarEntradaCodigo(e);
   });
 
   $("codigo").addEventListener("input",()=>{
     const campo=$("codigo"),valor=campo.value;
+    if($("estacion").value==="INVENTARIO"){
+      if(!/^[A-Za-z0-9]{0,80}$/.test(valor)){campo.value=valor.replace(/[^A-Za-z0-9]/g,"").slice(0,80);rechazarEntradaCodigo();return;}
+      codigoBloqueado=false;
+      setEstado(valor?"Lectura lista. Pulse REGISTRAR o use Enter al terminar el escaneo.":"");
+      return;
+    }
     if(!/^\d{0,5}$/.test(valor)){
       campo.value=valor.replace(/\D/g,"").slice(0,5);
       rechazarEntradaCodigo();
@@ -528,6 +572,7 @@ function iniciar(){
 
   $("operador").addEventListener("input",guardarPreferencias);
   $("operador").addEventListener("change",completarRegistroPendiente);
+  $("registrarInventarioBtn").onclick=registrarInventario;
 
   $("estacion").addEventListener("change",()=>{
     $("codigo").value="";
