@@ -1,19 +1,19 @@
-const CACHE = 'kamban-acopio-0002.9.10-nueva-url';
+const CACHE = 'kamban-acopio-0002.9.10-cola-estable';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.9.10-nueva-url',
-  './js/config.js?v=0002.9.10-nueva-url',
-  './js/utilidades.js?v=0002.9.10-nueva-url',
-  './js/db.js?v=0002.9.10-nueva-url',
-  './js/reglas.js?v=0002.9.10-nueva-url',
-  './js/tiempos.js?v=0002.9.10-nueva-url',
-  './js/sincronizacion.js?v=0002.9.10-nueva-url',
-  './js/seguimiento.js?v=0002.9.10-nueva-url',
-  './js/admin.js?v=0002.9.10-nueva-url',
-  './js/app.js?v=0002.9.10-nueva-url',
+  './css/estilos.css?v=0002.9.10-cola-estable',
+  './js/config.js?v=0002.9.10-cola-estable',
+  './js/utilidades.js?v=0002.9.10-cola-estable',
+  './js/db.js?v=0002.9.10-cola-estable',
+  './js/reglas.js?v=0002.9.10-cola-estable',
+  './js/tiempos.js?v=0002.9.10-cola-estable',
+  './js/sincronizacion.js?v=0002.9.10-cola-estable',
+  './js/seguimiento.js?v=0002.9.10-cola-estable',
+  './js/admin.js?v=0002.9.10-cola-estable',
+  './js/app.js?v=0002.9.10-cola-estable',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
