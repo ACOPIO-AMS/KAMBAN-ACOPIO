@@ -54,18 +54,18 @@ function renderSeguimiento(){
 
   filtrado.forEach(x=>{
     html+=`<tr>
-      <td>${esc(x.fecha)}</td>
-      <td><b>${esc(x.codigo)}</b></td>
-      <td>${esc(x.balanza).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.descarguio).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.chancado).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.muestreo).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.secado).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.pulverizado).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.cuarteo).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.atencion).replace(/\n/g,"<br>")}</td>
-      <td>${esc(x.lead).replace(/\n/g,"<br>")}</td>
-      <td><b>${esc(x.estado)}</b></td>
+      <td>${textoTabla(x.fecha)}</td>
+      <td><b>${textoTabla(x.codigo)}</b></td>
+      <td>${textoTabla(x.balanza).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.descarguio).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.chancado).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.muestreo).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.secado).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.pulverizado).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.cuarteo).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.atencion).replace(/\n/g,"<br>")}</td>
+      <td>${textoTabla(x.lead).replace(/\n/g,"<br>")}</td>
+      <td><b>${textoTabla(x.estado)}</b></td>
     </tr>`;
   });
   html+="</tbody></table></div>";

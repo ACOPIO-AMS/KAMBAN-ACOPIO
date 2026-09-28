@@ -1,4 +1,4 @@
-/* KANBAN 0002.9.7 - SINCRONIZACIÓN Y DIAGNÓSTICO */
+/* KANBAN 0002.9.10 - SINCRONIZACIÓN Y DIAGNÓSTICO */
 let syncProcesando=false,syncTimerPeriodico=null,syncTimerReintento=null,syncBackendVerificadoEn=0;
 let syncUltimoError="";
 const syncEnCurso=new Set();
@@ -22,7 +22,7 @@ async function procesarBorradosPendientes(){
     for(const x of lote){
       try{
         const r=await jsonpSeguro({action:"delete",id:x.id,estacion:x.estacion},5000);
-        if(r&&r.ok===true){const i=pendientes.findIndex(y=>y.id===x.id);if(i>=0){pendientes.splice(i,1);guardarBorradosPendientes(pendientes)}}
+        if(r&&r.ok===true&&String(r.id||"")===String(x.id)){const i=pendientes.findIndex(y=>y.id===x.id);if(i>=0){pendientes.splice(i,1);guardarBorradosPendientes(pendientes)}}
       }catch(e){break}
     }
   }finally{borradoSyncProcesando=false}
@@ -97,8 +97,8 @@ async function verificarBackend(forzar=false){
   if(String(r.version||"")!==String(BACKEND_VERSION_ESPERADA)){
     throw new Error("Backend incompatible. Encontrado: "+String(r.version||"sin versión")+" | Esperado: "+BACKEND_VERSION_ESPERADA);
   }
-  if(r.tiempos_base!==true||String(r.revision||"")!==BACKEND_REVISION_ESPERADA)
-    throw new Error("La implementación de Apps Script no confirma la revisión "+BACKEND_REVISION_ESPERADA+" con tiempos_base: true. Revise el despliegue y las funciones doGet duplicadas del proyecto.");
+  if(r.tiempos_base!==true)
+    throw new Error("El servidor publicado no confirma el guardado de tiempos (tiempos_base: true). Respuesta: versión "+String(r.version||"sin versión")+", revisión "+String(r.revision||"sin revisión")+". Revise la implementación de Apps Script.");
   syncBackendVerificadoEn=now;
   return true;
 }
@@ -174,11 +174,11 @@ async function procesarPendientesSync(manual=false){
         const porId=new Map(respuesta.map(x=>[String(x.id||""),x]));
         payloads.forEach(p=>{
           const x=porId.get(String(p.id));
-          if(x&&x.ok===true){
+          if(x&&x.ok===true&&(!p.recurso||String(x.recurso||"").toUpperCase()===p.recurso)){
             actualizarRegistro(String(p.id),{sincronizado:true,sync_bloqueado:false,recurso:String(x.recurso||p.recurso||"").toUpperCase(),sync_ultimo_error:"",sync_ultima_fecha:fechaHoraLocal()});
             enviados++;
           }else{
-            const msg=String(x&&x.error||"El servidor no confirmó el registro.");
+            const msg=String(x&&x.error||(x&&x.ok?"El servidor confirmó otro recurso para este ID.":"El servidor no confirmó el registro."));
             actualizarRegistro(String(p.id),{sincronizado:false,sync_bloqueado:false,sync_ultimo_error:msg,sync_ultima_fecha:fechaHoraLocal()});
             ultimoError=msg;observados++;
           }

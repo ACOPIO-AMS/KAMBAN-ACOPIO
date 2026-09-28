@@ -440,7 +440,7 @@ function render(){
     pendientes.length
       ?"<table><tr><th>Código</th><th>Estación</th><th>Falta</th><th>Hora</th></tr>"+
        pendientes.map(x=>
-         `<tr><td>${x.codigo}</td><td>${x.estacion}</td><td><span class="estadoBadge ${x.clase}">${x.falta}</span></td><td>${horaCorta(x.ultimo)}</td></tr>`
+         `<tr><td>${textoTabla(x.codigo)}</td><td>${textoTabla(x.estacion)}</td><td><span class="estadoBadge ${x.clase}">${textoTabla(x.falta)}</span></td><td>${textoTabla(horaCorta(x.ultimo))}</td></tr>`
        ).join("")+
        "</table>"
       :"";
@@ -452,12 +452,12 @@ function render(){
     const t=tiemposPorFinal.get(String(r.id));
 
     return `<tr>
-      <td>${r.codigo}</td>
-      <td>${r.evento||""}</td>
-      <td>${r.fecha_hora}</td>
-      <td>${r.operador}</td>
-      <td>${r.estacion}</td>
-      <td>${recursoDetalle(r)||"-"}</td>
+      <td>${textoTabla(r.codigo)}</td>
+      <td>${textoTabla(r.evento||"")}</td>
+      <td>${textoTabla(r.fecha_hora)}</td>
+      <td>${textoTabla(r.operador)}</td>
+      <td>${textoTabla(r.estacion)}</td>
+      <td>${textoTabla(recursoDetalle(r)||"-")}</td>
       <td>${t?relojDuracion(t.espera):"—"}</td>
       <td>${t?relojDuracion(t.parada):"—"}</td>
       <td>${t?relojDuracion(t.proceso):"—"}</td>

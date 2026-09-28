@@ -49,6 +49,7 @@ function eventoAutomatico(codigo,estacion){
 
 function validarSecuencia(codigo,estacion,evento,recurso){
   const ev=String(evento||"").toUpperCase();
+  if(!ev)return{ok:false,msg:"El lote ya completó los eventos de esta estación. No se registró un evento vacío."};
   const ultimo=ultimoEvento(codigo,estacion);
   const recursoActual=normalizarRecurso(recurso);
 

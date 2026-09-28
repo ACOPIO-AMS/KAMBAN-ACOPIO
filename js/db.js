@@ -9,7 +9,7 @@ function normalizarRegistroLocal(r){
   if(!recurso&&estacion==="SECADO"&&r.horno)recurso="H"+String(r.horno).replace(/^H/i,"");
   if(!recurso&&estacion==="PULVERIZADO"&&r.molino)recurso="M"+String(r.molino).replace(/^M/i,"");
   if(!recurso&&estacion==="BALANZA"&&(r.tipo_mineral||r.tipoMineral))recurso=String(r.tipo_mineral||r.tipoMineral).trim().toUpperCase();
-  if(!recurso&&estacion==="CANCHA"&&r.ubicacion)recurso=String(r.ubicacion).trim().toUpperCase();
+  if(!recurso&&estacion==="MUESTREO"&&r.ubicacion)recurso=String(r.ubicacion).trim().toUpperCase();
 
   return {
     ...r,
@@ -36,13 +36,22 @@ function datos(){
   try{
     const principal=localStorage.getItem(DB_KEY);
     const respaldo=localStorage.getItem(DB_BACKUP_KEY);
-    const raw=JSON.parse(principal||respaldo||"[]");
+    let raw,recuperado=false;
+    try{
+      raw=principal?JSON.parse(principal):JSON.parse(respaldo||"[]");
+      if(!Array.isArray(raw))throw new Error("Base local inválida");
+      recuperado=!principal&&!!respaldo;
+    }catch(error){
+      raw=JSON.parse(respaldo||"[]");
+      if(!Array.isArray(raw))throw error;
+      recuperado=true;
+    }
     if(!Array.isArray(raw))return [];
     const normalizados=raw.map(normalizarRegistroLocal).filter(Boolean);
-    if(JSON.stringify(raw)!==JSON.stringify(normalizados)){
+    if(recuperado||JSON.stringify(raw)!==JSON.stringify(normalizados)){
       const texto=JSON.stringify(normalizados);
-      localStorage.setItem(DB_KEY,texto);
-      localStorage.setItem(DB_BACKUP_KEY,texto);
+      try{localStorage.setItem(DB_KEY,texto)}catch(e){console.warn("Restauración local:",e)}
+      try{localStorage.setItem(DB_BACKUP_KEY,texto)}catch(e){console.warn("Respaldo local:",e)}
     }
     return normalizados;
   }catch(e){
@@ -55,7 +64,7 @@ function guardarDatos(data){
   const texto=JSON.stringify((data||[]).map(normalizarRegistroLocal).filter(Boolean));
   // Escritura espejo: si una clave se daña, la otra permite recuperar la cola.
   localStorage.setItem(DB_KEY,texto);
-  localStorage.setItem(DB_BACKUP_KEY,texto);
+  try{localStorage.setItem(DB_BACKUP_KEY,texto)}catch(e){console.warn("Respaldo local:",e)}
 }
 
 function agregarRegistro(reg){

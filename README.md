@@ -1,22 +1,23 @@
-# KANBAN CIRCUITO ACOPIO V0002.9.9
+# KANBAN CIRCUITO ACOPIO 0002.9.10
 
-## Cambios
-- La tabla «Registros locales» muestra espera, paradas, proceso efectivo y permanencia en la fila FINAL. Se eliminó la tabla separada de tiempos.
-- Apps Script añade I ESPERA, J PARADAS, K PROCESO EFECTIVO y L PERMANENCIA en cada hoja de estación. Escribe hh:mm:ss en la fila FINAL y recalcula si llega otro evento del mismo código después.
-- El recálculo examina las últimas 2000 filas de cada estación para el código afectado; los ciclos anteriores a ese tramo no se reconstruyen automáticamente.
-- El administrador permite buscar por código, evento, operador, fecha, estación o recurso, filtrar estación y seleccionar registros visibles sin perder selecciones al cambiar de filtro. El borrado mantiene el límite de 50 por bloque y la confirmación.
-- En Administrador se muestra el motivo si la sincronización falla. «PROBAR RED Y SINCRONIZACIÓN» vuelve a intentar también los registros que versiones anteriores dejaron bloqueados. Los errores del servidor no bloquean definitivamente los registros.
-- Se conservan el código de cinco dígitos, el registro inmediato, el recurso heredado y PATIO de las versiones anteriores.
+## Archivos de actualización
 
-## Cálculos
-Espera = INICIO − RECEPCIÓN. Paradas = suma de REINICIO − PARADA. Proceso efectivo = FINAL − INICIO − paradas. Permanencia = FINAL − RECEPCIÓN. En MUESTREO, SALIDA STOCK actúa como inicio si no existe INICIO. Sin RECEPCIÓN la espera y permanencia quedan vacías. Una parada sin reinicio no produce tiempo efectivo válido.
+- `APPS_SCRIPT/INGRESO_DE_DATOS.gs`: backend completo. La revisión que declara en `ping` es `0002.9.10`. La revisión del backend es `0002.9.10`; la URL nueva usa una clave de caché distinta sin cambiar la versión visible. El campo `version` permanece en `0002.9.0` para conservar compatibilidad con aplicaciones anteriores.
+- `index.html`, `js/`, `css/`, `icons/`, `manifest.json` y `service-worker.js`: frontend completo. La URL fija es la implementación «NUEVA» proporcionada por el usuario, que empieza `AKfycbx_Uwdi` y termina `A0gX-o`.
+- `PRUEBAS/integration.js`: prueba local de contrato, guardado en lote, tiempos, duplicados, recurso, cola, respaldo, reporte y captura de cinco dígitos. Solo para ejecutar en Node; no forma parte de los archivos web que se publican.
 
-## Implementación de Apps Script
-La interfaz apunta a la implementación «NUEVA» indicada por el usuario, cuyo ID empieza con `AKfycbx-wFV` y termina en `HJESELug`. Abra esa URL con `?action=ping`: debe aparecer `revision:"0002.9.7"` y `tiempos_base:true`. Este entorno no pudo consultar la URL publicada directamente. Si solo aparece `version:"0002.9.0"`, compruebe que el proyecto tenga un único `function doGet` (revise los otros archivos `.gs`) y cree una nueva versión de la implementación «NUEVA», conservando el mismo enlace.
+## Orden de actualización
 
-## Instalación
-1. Copie `APPS_SCRIPT/INGRESO_DE_DATOS.gs` al proyecto de Apps Script y actualice la implementación «NUEVA», conservando la URL indicada arriba. Hágalo antes de subir la interfaz: la nueva app verifica que el backend admita los tiempos; si todavía no está actualizado, los registros permanecen locales y pendientes de sincronizar.
-2. Reemplace los archivos web por los de esta carpeta. Compruebe que el encabezado muestre 0002.9.9. No borre los datos del navegador: incluyen registros pendientes. Entre a Administrador y pulse «PROBAR RED Y SINCRONIZACIÓN»; el mensaje «Motivo» indica el error específico si la base rechaza el envío.
-3. Compruebe I:L en una hoja de estación. Si ya hay otros encabezados allí, el servidor detendrá el guardado de tiempos y avisará para evitar sobrescribirlos.
+1. Conserve los registros locales del celular; no borre los datos del navegador ni desinstale la PWA. Exporte un CSV desde Administrador si desea una copia adicional.
+2. En el proyecto Apps Script, reemplace el contenido de `INGRESO DE DATOS.gs` con `APPS_SCRIPT/INGRESO_DE_DATOS.gs`. Los archivos `ACTUALIZA KAMBAN.gs` y `calculo tiempos.gs` no fueron suministrados para esta auditoría. Revise esos archivos: en todo el proyecto debe existir **solo un `function doGet` y un `function doPost`**. No elimine otras funciones ni activadores sin revisarlos.
+3. Guarde y edite la implementación **«NUEVA»**: seleccione **Nueva versión** y pulse **Implementar**. Compruebe que conserva el mismo ID de implementación.
+4. Abra `https://script.google.com/macros/s/AKfycbx_UwdiDhTvcWVAdygIIGh4otJXp22aFHFQ2t5QLJUySxDZBs_lh9ER0la_aA0gX-o/exec?action=ping`. Debe devolver `ok:true`, `version:"0002.9.0"`, `revision:"0002.9.10"` y `tiempos_base:true`. Si solo devuelve la versión antigua, no publique aún el frontend: la implementación no está ejecutando este backend.
+5. Publique los archivos web del directorio `kanban_290_ligero` en el repositorio. La cabecera debe indicar `0002.9.10`. En el celular abra la app con conexión y use Administrador → **PROBAR RED Y SINCRONIZACIÓN**. Confirme que disminuyan los pendientes y que aparezcan en la hoja los registros y tiempos I:L.
 
-El backend mantiene la respuesta de versión 0002.9.0 para que los celulares con la interfaz anterior sigan sincronizando mientras se actualizan. La nueva app comprueba adicionalmente `revision:"0002.9.7"` y `tiempos_base:true`. La función `PRUEBA_PING_TIEMPOS_BASE` devuelve esos mismos datos al ejecutarla en el editor, pero la prueba definitiva es la URL `/exec?action=ping`.
+## Reglas de datos
+
+El código nuevo se registra con exactamente cinco dígitos, tanto con entrada manual como con escáner. El recurso inicial se hereda de los eventos locales anteriores para la misma estación y código. El backend acepta registros antiguos pendientes de versiones previas sin cambiar su código. En la fila `FINAL`, las columnas I:L contienen **ESPERA**, **PARADAS**, **PROCESO EFECTIVO** y **PERMANENCIA** en `hh:mm:ss`. Si falta un evento necesario, el cálculo queda vacío. Los cálculos usan los últimos 2000 renglones de cada estación.
+
+## Alcance de las pruebas
+
+Las pruebas automatizadas se ejecutaron con una hoja y una respuesta Apps Script simuladas en memoria. No se pudo consultar la implementación `/exec` ni escribir en la hoja real desde este entorno. Los otros dos archivos `.gs` del proyecto no están disponibles, por lo que no se pudo comprobar si definen `doGet`/`doPost` ni si interfieren con esta implementación.
