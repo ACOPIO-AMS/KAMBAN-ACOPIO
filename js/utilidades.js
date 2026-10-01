@@ -1,1 +1,7 @@
 function $(id){return document.getElementById(id)}function fechaHoraLocal(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0")}function fechaSolo(f){return String(f||"").substring(0,10)}function horaCorta(f){return String(f||"").substring(11,16)}function hoyISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function uid(){return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9)}function endpoint(){return String(ENDPOINT_FIJO||"").trim()}function setEstado(t){$("estadoEntrada").textContent=t||""}function enfocarCodigo(){setTimeout(()=>$("codigo").focus(),80)}function beepOk(){try{navigator.vibrate&&navigator.vibrate(35)}catch(e){}}function minutosEntre(a,b){const da=new Date(String(a).replace(" ","T")),db=b?new Date(String(b).replace(" ","T")):new Date();if(isNaN(da)||isNaN(db))return 0;return Math.max(0,Math.round((db-da)/60000))}function formatoMinutos(min){return String(Math.floor(min/60)).padStart(2,"0")+":"+String(min%60).padStart(2,"0")}function esHoy(f){return fechaSolo(f)===hoyISO()}
+function extraerCodigoInventario(lectura){
+  const texto=String(lectura||"").trim().toUpperCase();
+  if(/^\d{5}$/.test(texto))return "PPO"+texto;
+  const codigos=[...texto.matchAll(/PP[O0](\d{5})/g)].map(x=>"PPO"+x[1]);
+  return new Set(codigos).size===1?codigos[0]:"";
+}

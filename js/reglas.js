@@ -1,6 +1,6 @@
 let modoEspecial="NORMAL";
 
-function permiteParada(est){return est==="CHANCADO"}
+function permiteParada(est){return est==="CHANCADO"||est==="DESCARGUIO"}
 function permiteStock(est){return est==="DESCARGUIO"||est==="MUESTREO"}
 function reglasEstacion(est){return EVENTS_BY_STATION[est]||EVENTS_BY_STATION.DEFAULT}
 function estacionUsaRecurso(est){return ["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(est)}
@@ -36,7 +36,7 @@ function ubicacionMuestreoAsignada(codigo){
 
 function eventoAutomatico(codigo,estacion){
   const ultimo=ultimoEvento(codigo,estacion);
-  if(estacion==="CHANCADO"&&ultimo==="PARADA")return"REINICIO";
+  if(permiteParada(estacion)&&ultimo==="PARADA")return"REINICIO";
   // En MUESTREO, la salida de stock se registra desde el modo INICIO.
   // Luego la siguiente lectura normal cierra directamente el proceso con FINAL.
   if(estacion==="MUESTREO"&&ultimoEventoStock(codigo,estacion)==="EN STOCK")return"SALIDA STOCK";
@@ -65,11 +65,15 @@ function validarSecuencia(codigo,estacion,evento,recurso){
     }
   }
 
-  if(estacion==="CHANCADO"){
+  if(permiteParada(estacion)){
     if(ev==="PARADA"&&!tieneEvento(codigo,estacion,"INICIO"))
-      return{ok:false,msg:"NO SE PUEDE REGISTRAR PARADA.\n\nEl lote aún no tiene INICIO en CHANCADO."};
+      return{ok:false,msg:`NO SE PUEDE REGISTRAR PARADA.\n\nEl lote aún no tiene INICIO en ${estacion}.`};
     if(ev==="PARADA"&&ultimo==="PARADA")
       return{ok:false,msg:"Ya está en PARADA. La siguiente lectura normal registrará REINICIO."};
+    if(ev==="PARADA"&&tieneEvento(codigo,estacion,"FINAL"))
+      return{ok:false,msg:"El lote ya tiene FINAL. No se puede registrar PARADA."};
+    if(ev==="REINICIO"&&ultimo!=="PARADA")
+      return{ok:false,msg:"REINICIO requiere una PARADA previa."};
     if(ev==="FINAL"&&ultimo==="PARADA")
       return{ok:false,msg:"Primero escanee para registrar REINICIO."};
   }

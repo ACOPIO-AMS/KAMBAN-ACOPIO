@@ -135,7 +135,7 @@ function rechazarEntradaCodigo(e){
   if(e&&e.preventDefault)e.preventDefault();
   codigoBloqueado=true;
   setEstado($("estacion").value==="INVENTARIO"
-    ?"Inventario: solo letras y números, entre 6 y 80 caracteres. Corrija el código."
+    ?"Inventario: ingrese 5 números o una lectura de hasta 80 letras y números."
     :"Solo se permiten 5 dígitos numéricos. Borre y vuelva a ingresar el código.");
 }
 
@@ -153,6 +153,7 @@ function configurarCamposEspeciales(){
   mineralBox.classList.toggle("hide",estacion!=="BALANZA");
   canchaBox.classList.toggle("hide",estacion!=="MUESTREO");
   const esInventario=estacion==="INVENTARIO";
+  $("pendientesBox").classList.toggle("hide",esInventario);
   if(esInventario){
     $("inventarioSerie").value=localStorage.getItem(INVENTARIO_SERIE_KEY)||"";
     $("inventarioCancha").value=localStorage.getItem(INVENTARIO_CANCHA_KEY)||"";
@@ -160,10 +161,10 @@ function configurarCamposEspeciales(){
   }
   $("inventarioUbicacionBox").classList.toggle("hide",!esInventario);
   $("registrarInventarioBtn").classList.toggle("hide",!esInventario);
-  $("codigoLabel").textContent=esInventario?"Código de inventario (letras y números)":"Código QR / digitado (5 números)";
+  $("codigoLabel").textContent=esInventario?"Lectura de inventario o 5 dígitos manuales":"Código QR / digitado (5 números)";
   $("codigo").inputMode=esInventario?"text":"numeric";
   $("codigo").maxLength=esInventario?80:5;
-  $("codigo").pattern=esInventario?"[A-Za-z0-9]{6,80}":"[0-9]{5}";
+  $("codigo").pattern=esInventario?"(?:[0-9]{5}|[A-Za-z0-9]{6,80})":"[0-9]{5}";
   stockBox.classList.add("hide");
   if(estacion!=="BALANZA")$("tipoMineral").value="";
   if(estacion!=="BALANZA")$("estadoMineral").value="";
@@ -280,11 +281,15 @@ function completarRegistroPendiente(){
 
 function registrarInventario(){
   if(registrando)return;
-  const codigo=$("codigo").value.trim(),operador=$("operador").value.trim();
+  const lectura=$("codigo").value.trim(),codigo=extraerCodigoInventario(lectura),operador=$("operador").value.trim();
   const serie=$("inventarioSerie").value.trim().toUpperCase();
   const cancha=$("inventarioCancha").value.trim();
-  if(!/^[A-Za-z0-9]{6,80}$/.test(codigo)){
-    setEstado("Inventario: el código debe tener entre 6 y 80 letras o números.");
+  if(!/^(?:\d{5}|[A-Za-z0-9]{6,80})$/.test(lectura)){
+    setEstado("Inventario: ingrese 5 números o lea el código alfanumérico completo.");
+    $("codigo").focus();return;
+  }
+  if(!codigo){
+    setEstado("Inventario: la lectura larga debe contener un único código PPO seguido de 5 dígitos.");
     $("codigo").focus();return;
   }
   if(!operador){pedirDatoPendiente("Ingrese el operador.",$("operador"));return;}
@@ -292,7 +297,7 @@ function registrarInventario(){
   if(!/^[1-8]$/.test(cancha)){pedirDatoPendiente("Seleccione un número de cancha del 1 al 8.",$("inventarioCancha"));return;}
   const lote=codigo.slice(-5);
   const registro={id:uid(),codigo,evento:"LECTURA",fecha_hora:fechaHoraLocal(),operador,
-    estacion:"INVENTARIO",recurso:`${serie}-${cancha}`,detalle:lote,
+    estacion:"INVENTARIO",recurso:`${serie}-${cancha}`,detalle:lote,lectura_original:lectura,
     serie,cancha,sincronizado:false,eliminado:false,version:APP_VERSION};
   registrando=true;
   try{agregarRegistro(registro)}catch(error){
@@ -300,7 +305,7 @@ function registrarInventario(){
   }
   guardarPreferencias();
   $("codigo").value="";reiniciarCapturaCodigo();registrando=false;
-  render();setEstado(`Inventario guardado: lote ${lote} | cancha ${serie}-${cancha}. Pendiente de confirmación en la base.`);
+  render();setEstado(`Inventario guardado: ${codigo} | cancha ${serie}-${cancha}. Pendiente de confirmación en la base.`);
   beepOk();sincronizarRegistroInmediato(registro);enfocarCodigo();
 }
 
@@ -628,6 +633,8 @@ function iniciar(){
   $("adminBtn").onclick=abrirAdmin;
   $("cerrarAdminBtn").onclick=cerrarAdmin;
   $("probarSyncBtn").onclick=()=>sincronizar(true);
+  $("solicitarSyncEquiposBtn").onclick=()=>solicitarSyncEquipos(true);
+  $("solicitarActualizacionEquiposBtn").onclick=()=>solicitarActualizacionEquipos();
   $("configurarEquipoBtn").onclick=configurarEquipoActual;
   $("actualizarControlBtn").onclick=actualizarControlDispositivos;
   $("exportarBtn").onclick=exportarCSV;

@@ -1,19 +1,19 @@
-const CACHE = 'kamban-acopio-0002.9.10-inventario-listas';
+const CACHE = 'kamban-acopio-0002.9.10-inventario-manual';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/estilos.css?v=0002.9.10-inventario-listas',
-  './js/config.js?v=0002.9.10-inventario-listas',
-  './js/utilidades.js?v=0002.9.10-inventario-listas',
-  './js/db.js?v=0002.9.10-inventario-listas',
-  './js/reglas.js?v=0002.9.10-inventario-listas',
-  './js/tiempos.js?v=0002.9.10-inventario-listas',
-  './js/sincronizacion.js?v=0002.9.10-inventario-listas',
-  './js/seguimiento.js?v=0002.9.10-inventario-listas',
-  './js/admin.js?v=0002.9.10-inventario-listas',
-  './js/app.js?v=0002.9.10-inventario-listas',
+  './css/estilos.css?v=0002.9.10-inventario-manual',
+  './js/config.js?v=0002.9.10-inventario-manual',
+  './js/utilidades.js?v=0002.9.10-inventario-manual',
+  './js/db.js?v=0002.9.10-inventario-manual',
+  './js/reglas.js?v=0002.9.10-inventario-manual',
+  './js/tiempos.js?v=0002.9.10-inventario-manual',
+  './js/sincronizacion.js?v=0002.9.10-inventario-manual',
+  './js/seguimiento.js?v=0002.9.10-inventario-manual',
+  './js/admin.js?v=0002.9.10-inventario-manual',
+  './js/app.js?v=0002.9.10-inventario-manual',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

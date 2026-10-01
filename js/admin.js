@@ -1,10 +1,40 @@
 function abrirAdmin(){const pin=prompt("Clave administrador:");if(pin!==ADMIN_PIN){if(pin!==null)alert("Clave incorrecta.");return}$("adminModal").classList.remove("hide");actualizarAdmin();actualizarControlDispositivos()}
 function cerrarAdmin(){$("adminModal").classList.add("hide");$("seleccionBox").classList.add("hide");enfocarCodigo()}
-function actualizarAdmin(){const d=datos(),pendientes=d.filter(r=>!r.sincronizado),ultimo=syncUltimoError||pendientes.map(r=>r.sync_ultimo_error).find(Boolean)||"";$("adminInfo").textContent=`Registros locales: ${d.length} | Pendientes sync: ${pendientes.length} | Backend: ${syncBackendBuild||"sin verificar"}${ultimo?" | Motivo: "+ultimo:""}`}
+function actualizarAdmin(){
+  const d=datos(),pendientes=d.filter(r=>!r.sincronizado),ultimo=syncUltimoError||pendientes.map(r=>r.sync_ultimo_error).find(Boolean)||"";
+  $("adminInfo").textContent=`Registros locales: ${d.length} | Pendientes sync: ${pendientes.length} | Backend: ${syncBackendBuild||"sin verificar"}${ultimo?" | Motivo: "+ultimo:""}`;
+  const box=$("pendientesDiagnostico");if(!box)return;
+  box.innerHTML=pendientes.length
+    ?"<div class='note'>Pendientes de este equipo (solo lectura):</div><div class='tableWrap'><table><tr><th>Código</th><th>Evento</th><th>Estación</th><th>Último intento</th><th>Motivo</th></tr>"+
+      pendientes.slice(0,30).map(r=>`<tr><td>${textoTabla(r.codigo)}</td><td>${textoTabla(r.evento)}</td><td>${textoTabla(r.estacion)}</td><td>${textoTabla(r.sync_ultima_fecha||"—")}</td><td>${textoTabla(r.sync_ultimo_error||"En espera de envío")}</td></tr>`).join("")+"</table></div>"
+    :"<div class='note'>Este equipo no tiene registros pendientes.</div>";
+}
 function configurarEquipoActual(){const actual=nombreDispositivo()==="EQUIPO SIN NOMBRE"?"":nombreDispositivo();const nombre=prompt("Nombre para identificar esta PC o celular.\nEjemplo: CELULAR CHANCADO 1",actual);if(nombre===null)return;const limpio=String(nombre).trim().toUpperCase();if(!limpio){alert("Debe ingresar un nombre para el equipo.");return;}localStorage.setItem(DEVICE_NAME_KEY,limpio);reportarEstadoDispositivo(true);actualizarAdmin()}
 function fechaControl(v){return String(v||"-").replace("T"," ")}
 function claseControl(d){const ultima=new Date(String(d.ultima_conexion||"").replace(" ","T"));const minutos=isNaN(ultima)?9999:Math.floor((Date.now()-ultima.getTime())/60000);if(minutos>5)return ["SIN CONEXIÓN","bad"];if(Number(d.pendientes||0)>0)return ["PENDIENTE","bad"];return ["CORRECTO","ok"]}
-function actualizarControlDispositivos(){const box=$("controlDispositivos");if(!box||!navigator.onLine){if(box)box.innerHTML="<div class='note'>Conéctese a internet para consultar los equipos.</div>";return;}box.innerHTML="<div class='note'>Consultando equipos…</div>";jsonpSeguro({action:"devices"},15000).then(r=>{if(!r||r.ok!==true)throw new Error(r&&r.error||"No se pudo obtener el control de equipos.");const lista=Array.isArray(r.data)?r.data:[];if(!lista.length){box.innerHTML="<div class='note'>Aún no hay equipos reportados. Abra la aplicación una vez en cada PC o celular.</div>";return;}const filas=lista.map(d=>{const [estado,clase]=claseControl(d);return `<tr><td>${textoTabla(d.equipo||"SIN NOMBRE")}</td><td>${textoTabla(d.area||"-")}</td><td>${textoTabla(fechaControl(d.ultima_conexion))}</td><td>${textoTabla(d.pendientes||0)}</td><td class='${clase}'>${estado}</td><td>${textoTabla(d.version||"-")}</td><td>${textoTabla(d.ultimo_error||"-")}</td></tr>`}).join("");box.innerHTML="<div class='tableWrap controlTable'><table><tr><th>Equipo</th><th>Área</th><th>Última conexión</th><th>Pend.</th><th>Estado</th><th>Versión</th><th>Observación</th></tr>"+filas+"</table></div>";}).catch(e=>{box.innerHTML="<div class='note bad'>No se pudo consultar: "+textoTabla(String(e.message||e))+"</div>";})}
+function estadoOrden(token,confirmado,resultado){
+  if(!token)return "Sin orden";
+  if(String(confirmado||"")!==String(token))return "Esperando conexión o respuesta";
+  return String(resultado||"Orden atendida");
+}
+function actualizarControlDispositivos(){
+  const box=$("controlDispositivos");
+  if(!box||!navigator.onLine){if(box)box.innerHTML="<div class='note'>Conéctese a internet para consultar los equipos.</div>";return;}
+  box.innerHTML="<div class='note'>Consultando equipos…</div>";
+  jsonpSeguro({action:"devices"},15000).then(r=>{
+    if(!r||r.ok!==true)throw new Error(r&&r.error||"No se pudo obtener el control de equipos.");
+    const lista=Array.isArray(r.data)?r.data:[];
+    if(!lista.length){box.innerHTML="<div class='note'>Aún no hay equipos reportados. Abra la aplicación una vez en cada PC o celular.</div>";return;}
+    const actualizados=lista.filter(d=>r.update_token&&d.update_token_ack===r.update_token).length;
+    const reintentados=lista.filter(d=>r.sync_token&&d.sync_token_ack===r.sync_token).length;
+    const resumen=`<div class="note">Actualización: ${actualizados}/${lista.length} equipos revisaron la orden. Transferencia: ${reintentados}/${lista.length} equipos reintentaron. Revise la compilación y pendientes por equipo.</div>`;
+    const filas=lista.map(d=>{
+      const [estado,clase]=claseControl(d);
+      return `<tr><td>${textoTabla(d.equipo||"SIN NOMBRE")}</td><td>${textoTabla(d.area||"-")}</td><td>${textoTabla(fechaControl(d.ultima_conexion))}</td><td>${textoTabla(d.pendientes||0)}</td><td class='${clase}'>${estado}</td><td>${textoTabla(d.version||"-")}</td><td>${textoTabla(estadoOrden(r.update_token,d.update_token_ack,d.update_status))}</td><td>${textoTabla(estadoOrden(r.sync_token,d.sync_token_ack,d.sync_status))}</td><td>${textoTabla(d.ultimo_error||"-")}</td></tr>`;
+    }).join("");
+    box.innerHTML=resumen+"<div class='tableWrap controlTable'><table><tr><th>Equipo</th><th>Área</th><th>Última conexión</th><th>Pend.</th><th>Estado</th><th>Compilación</th><th>Actualización</th><th>Transferencia</th><th>Observación</th></tr>"+filas+"</table></div>";
+  }).catch(e=>{box.innerHTML="<div class='note bad'>No se pudo consultar: "+textoTabla(String(e.message||e))+"</div>";});
+}
 function recursoCSV(r){if(r.recurso)return r.recurso;if(r.estacion==="BALANZA"&&(r.tipo_mineral||r.tipoMineral))return String(r.tipo_mineral||r.tipoMineral).toUpperCase();if(r.estacion==="MUESTREO"&&r.ubicacion)return String(r.ubicacion).toUpperCase();if(r.estacion==="DESCARGUIO"&&r.tolva)return"T"+r.tolva;if(r.estacion==="CHANCADO"&&r.circuito)return"C"+r.circuito;if(r.estacion==="SECADO"&&r.horno)return"H"+r.horno;if(r.estacion==="PULVERIZADO"&&r.molino)return"M"+r.molino;return""}
 function exportarCSV(){const rows=[["CODIGO","EVENTO","FECHA_HORA","OPERADOR","ESTACION","RECURSO","ID"]];datos().forEach(r=>rows.push([r.codigo,r.evento,r.fecha_hora,r.operador,r.estacion,recursoCSV(r),r.id]));const csv="\ufeff"+rows.map(r=>r.map(c=>`"${String(c||"").replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="respaldo_kamban_"+Date.now()+".csv";a.click()}
 function gruposFinalizadosAnteriores(diasMinimos=0){const grupos={};datos().filter(r=>!r.eliminado).forEach(r=>{const k=r.estacion+"||"+r.codigo;(grupos[k]||(grupos[k]=[])).push(r)});const ids=[];const limite=new Date();limite.setHours(0,0,0,0);limite.setDate(limite.getDate()-Number(diasMinimos||0));Object.values(grupos).forEach(regs=>{regs.sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora)));const u=regs[regs.length-1],ev=String(u.evento||"").toUpperCase();const f=new Date(String(u.fecha_hora||"").replace(" ","T"));if((ev==="FINAL"||ev==="FINALIZADO")&&!isNaN(f)&&f<limite&&regs.every(r=>r.sincronizado))regs.forEach(r=>ids.push(r.id))});return ids}
