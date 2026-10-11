@@ -1,0 +1,8 @@
+Desde la carpeta del paquete:
+python tests/test_requisitos.py
+node tests/test_backend.js
+node tests/test_export.js
+node tests/test_sync.js
+
+Estas son pruebas locales. La verificación de entrega real a Google Sheets requiere
+publicar el Apps Script y probar desde un dispositivo con conexión.

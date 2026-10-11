@@ -1,0 +1,61 @@
+KANBAN QR - CORRECCIÓN INTEGRAL 0002.9.12
+==========================================
+BASE VERIFICADA: repositorio ACOPIO-AMS/KAMBAN-ACOPIO, versión web 0002.9.10.
+
+CONTENIDO
+- aplicar_parche.py: actualiza frontend desde una copia del repositorio 2.9.10.
+- js/exportar_excel.js: exportación de respaldo Excel sin conexión.
+- INGRESO_DE_DATOS_KANBAN_0002_9_12.gs: backend Apps Script completo.
+- tests/: pruebas locales.
+
+CAMBIOS
+1. DESCARGUIO / PATIO: 1ª lectura INICIO; 2ª lectura FINAL + EN STOCK automático.
+   FINAL y EN STOCK tienen IDs distintos y se guardan juntos localmente.
+   EN STOCK automático utiliza motivo PATIO; la salida posterior sigue siendo manual.
+2. MUESTREO: segmentos A/B/C/4/5/6/7/8/9/10; números 0..10;
+   formato de ubicación NUMERO + SEGMENTO, ej. 3 A.
+3. INVENTARIO: mismos segmentos y números 0..10; formato 3 A;
+   mantiene lectura QR y entrada manual de cinco dígitos.
+4. Pendientes por finalizar: orden cronológico descendente (último primero).
+5. Sincronización: lotes de 4, cola persistente y reintento, confirmación por ID;
+   si INVENTARIO no está soportado, no bloquea las demás estaciones.
+6. Retención LOCAL: inventario sincronizado >48 horas; demás registros
+   finalizados sincronizados >20 días. NO borra datos de Google Sheets.
+7. Respaldo XLSX local con hojas Registros, Pendientes y Control.
+
+INSTALACIÓN
+A) DESCARGUE primero copia de seguridad del repositorio y del Apps Script.
+B) En PC con Python 3, descomprima este paquete.
+C) Descargue el repositorio original 2.9.10 como ZIP y descomprímalo.
+D) Ejecute:
+   python aplicar_parche.py RUTA_A_LA_CARPETA_DEL_REPOSITORIO
+   (El script se detiene sin escribir si no encuentra el código esperado).
+E) Ejecute node --check en los archivos JS modificados y las pruebas locales.
+F) En Apps Script, reemplace el código de la implementación Kanban por
+   INGRESO_DE_DATOS_KANBAN_0002_9_12.gs y publique una NUEVA versión de
+   la implementación existente, conservando su URL. Verifique permisos.
+G) Publique frontend y pruebe primero en UN equipo, sin borrar almacenamiento
+   ni desinstalar la PWA; compruebe cada ID en la hoja de su estación.
+H) Si funciona, publique y fuerce actualización en los demás equipos.
+
+PRECAUCIONES
+- La prueba local NO equivale a prueba de producción con la red real.
+- No borrar caché/datos del sitio de celulares con pendientes.
+- El respaldo Excel recoge datos LOCALES del dispositivo, no toda la base.
+- Un backend antiguo puede rechazar ubicaciones nuevas. Publicar ambos lados.
+- No se puede garantizar entrega mientras el dispositivo esté sin internet.
+- La política de limpieza es LOCAL: la BD de Google Sheets se conserva.
+- La versión 2.9.10 anterior eliminaba remotamente registros al limpiar.
+  Este parche corrige ese comportamiento para futuras limpiezas.
+- No se han modificado archivos publicados; el repositorio conectado es lectura.
+
+
+AJUSTE FINAL - QR EXTENSOS DE INVENTARIO
+----------------------------------------
+- La captura de INVENTARIO admite hasta 2048 caracteres.
+- Se permiten URLs, signos, guiones, espacios y metadatos del QR.
+- La app extrae únicamente un código PPO + 5 dígitos.
+- Si se digitan 5 números, se convierten a PPO + 5 dígitos.
+- A Google Sheets se envía el código PPO normalizado, no el texto extenso del QR.
+- Si el QR contiene cero o más de un PPO diferente, no registra para evitar errores.
+- Nota: si se usa la cámara/lector QR externo del teléfono y ese lector abre URLs por su cuenta, esa navegación ocurre fuera de la PWA. Para evitarla, escanear con un lector configurado como teclado/HID dentro del campo INVENTARIO.
