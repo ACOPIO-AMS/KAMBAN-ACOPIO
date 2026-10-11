@@ -271,6 +271,14 @@ function limpiezaAutomaticaLocal(){
     x = unica(x,'<div class="note">A/B/C usan posición 1–8.</div>', '<div class="note">Formato: número + segmento. Ejemplo: 3 A. Numeración 0–10.</div>', 'index.html')
     x = unica(x,'<option value="">N°</option><option value="1">1</option>', '<option value="">N°</option><option value="0">0</option><option value="1">1</option>', 'index.html')
     x = unica(x,'<div class="note">Ejemplo: serie A y cancha 5 → A-5.</div>', '<div class="note">Formato: número + segmento. Ejemplo: 3 A. Numeración 0–10.</div>', 'index.html')
+    # Orden visual requerido: primero número, luego segmento (ej. 3 | A).
+    inicio=x.index('<div class="ubicacionMuestreoRow"><select id="inventarioSerie"')
+    fin=x.index('</div>', inicio)
+    bloque=x[inicio:fin]
+    import re
+    m=re.fullmatch(r'(<div class="ubicacionMuestreoRow">)(<select id="inventarioSerie".*?</select>)(<select id="inventarioCancha".*?</select>)',bloque)
+    if not m: raise RuntimeError('No se encontró el bloque exacto de selectores de inventario')
+    x=x[:inicio]+m.group(1)+m.group(3)+m.group(2)+x[fin:]
     x = unica(x,'<button id="exportarBtn" class="warning">EXPORTAR RESPALDO CSV</button>',
               '<button id="exportarBtn" class="warning">CREAR RESPALDO EXCEL (.XLSX)</button>','index.html')
     x = unica(x,
