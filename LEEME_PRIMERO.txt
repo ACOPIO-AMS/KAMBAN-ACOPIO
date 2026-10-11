@@ -29,3 +29,9 @@ Abrir el Apps Script que recibe los datos, reemplazar el código por backend/ING
 
 RECUPERACION DE PENDIENTES
 No limpiar almacenamiento ni desinstalar la PWA. Una vez publicado frontend + backend 3.0, usar Administrador > PROBAR Y REINTENTAR SINCRONIZACIÓN y luego SOLICITAR REINTENTO EN TODOS LOS EQUIPOS.
+
+
+AJUSTE V3.0 PATIO/LAYOUT R1:
+- DESCARGUIO + PATIO: 1ra lectura INICIO; 2da lectura genera FINAL y EN STOCK como dos registros locales y dos IDs independientes.
+- INVENTARIO/MUESTREO: Estación queda a la izquierda y ubicación N° + segmento a la derecha para optimizar espacio.
+- Administrador conserva únicamente las 5 opciones solicitadas.

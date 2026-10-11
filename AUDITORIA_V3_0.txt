@@ -51,3 +51,9 @@ IMPORTANTE PARA PUBLICAR
 
 LIMITACION DE VALIDACION
 Las pruebas incluidas verifican lógica, estructura y sintaxis en el paquete. La confirmación final de extremo a extremo contra Google Sheets requiere publicar el Apps Script 3.0 y ejecutar una prueba real desde al menos un equipo, porque el paquete local no puede escribir en el deployment productivo por sí solo.
+
+
+AJUSTE V3.0 PATIO/LAYOUT R1:
+- DESCARGUIO + PATIO: 1ra lectura INICIO; 2da lectura genera FINAL y EN STOCK como dos registros locales y dos IDs independientes.
+- INVENTARIO/MUESTREO: Estación queda a la izquierda y ubicación N° + segmento a la derecha para optimizar espacio.
+- Administrador conserva únicamente las 5 opciones solicitadas.
