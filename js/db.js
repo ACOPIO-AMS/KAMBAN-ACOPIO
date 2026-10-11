@@ -1,114 +1,19 @@
 function normalizarRegistroLocal(r){
-  if(!r||typeof r!=="object")return null;
-
-  const estacion=String(r.estacion||"").trim().toUpperCase();
-  let recurso=String(r.recurso||"").trim().toUpperCase();
-
-  if(!recurso&&estacion==="DESCARGUIO"&&r.tolva)recurso="T"+String(r.tolva).replace(/^T/i,"");
-  if(!recurso&&estacion==="CHANCADO"&&r.circuito)recurso="C"+String(r.circuito).replace(/^C/i,"");
-  if(!recurso&&estacion==="SECADO"&&r.horno)recurso="H"+String(r.horno).replace(/^H/i,"");
-  if(!recurso&&estacion==="PULVERIZADO"&&r.molino)recurso="M"+String(r.molino).replace(/^M/i,"");
-  if(!recurso&&estacion==="BALANZA"&&(r.tipo_mineral||r.tipoMineral))recurso=String(r.tipo_mineral||r.tipoMineral).trim().toUpperCase();
-  if(!recurso&&estacion==="MUESTREO"&&r.ubicacion)recurso=String(r.ubicacion).trim().toUpperCase();
-
-  return {
-    ...r,
-    id:String(r.id||r.id_registro||"").trim(),
-    codigo:String(r.codigo||"").trim(),
-    evento:String(r.evento||"").trim().toUpperCase(),
-    fecha_hora:String(r.fecha_hora||r.fechaHora||"").trim(),
-    operador:String(r.operador||"").trim(),
-    estacion,
-    recurso,
-    tipo_mineral:String(r.tipo_mineral||r.tipoMineral||"").trim().toUpperCase(),
-    ubicacion:String(r.ubicacion||"").trim().toUpperCase(),
-    detalle:String(r.detalle||r.motivo_stock||"").trim().toUpperCase(),
-    sincronizado:r.sincronizado===true,
-    sync_intentos:Number(r.sync_intentos||0),
-    sync_ultimo_error:String(r.sync_ultimo_error||""),
-    sync_ultima_fecha:String(r.sync_ultima_fecha||""),
-    eliminado:r.eliminado===true,
-    version:String(r.version||APP_VERSION)
-  };
+ if(!r||typeof r!=="object")return null;
+ const estacion=String(r.estacion||"").trim().toUpperCase();
+ let recurso=String(r.recurso||"").trim().toUpperCase();
+ if(estacion==="INVENTARIO")recurso=normalizarUbicacion(recurso);
+ return {...r,id:String(r.id||r.id_registro||"").trim(),codigo:String(r.codigo||"").trim(),evento:String(r.evento||"").trim().toUpperCase(),fecha_hora:String(r.fecha_hora||r.fechaHora||"").trim(),operador:String(r.operador||"").trim(),estacion,recurso,detalle:String(r.detalle||"").trim().toUpperCase(),sincronizado:r.sincronizado===true,sync_bloqueado:false,sync_intentos:Number(r.sync_intentos||0),sync_ultimo_error:String(r.sync_ultimo_error||""),sync_ultima_fecha:String(r.sync_ultima_fecha||""),eliminado:r.eliminado===true,version:String(r.version||APP_VERSION)};
 }
-
 function datos(){
-  try{
-    const principal=localStorage.getItem(DB_KEY);
-    const respaldo=localStorage.getItem(DB_BACKUP_KEY);
-    let raw,recuperado=false;
-    try{
-      raw=principal?JSON.parse(principal):JSON.parse(respaldo||"[]");
-      if(!Array.isArray(raw))throw new Error("Base local inválida");
-      recuperado=!principal&&!!respaldo;
-    }catch(error){
-      raw=JSON.parse(respaldo||"[]");
-      if(!Array.isArray(raw))throw error;
-      recuperado=true;
-    }
-    if(!Array.isArray(raw))return [];
-    const normalizados=raw.map(normalizarRegistroLocal).filter(Boolean);
-    if(recuperado||JSON.stringify(raw)!==JSON.stringify(normalizados)){
-      const texto=JSON.stringify(normalizados);
-      try{localStorage.setItem(DB_KEY,texto)}catch(e){console.warn("Restauración local:",e)}
-      try{localStorage.setItem(DB_BACKUP_KEY,texto)}catch(e){console.warn("Respaldo local:",e)}
-    }
-    return normalizados;
-  }catch(e){
-    console.error("Base local dañada:",e);
-    return [];
-  }
+ let raw=[];try{raw=JSON.parse(localStorage.getItem(DB_KEY)||localStorage.getItem(DB_BACKUP_KEY)||"[]")}catch(e){try{raw=JSON.parse(localStorage.getItem(DB_BACKUP_KEY)||"[]")}catch(_){raw=[]}}
+ const d=(Array.isArray(raw)?raw:[]).map(normalizarRegistroLocal).filter(Boolean);return d;
 }
-
-function guardarDatos(data){
-  const texto=JSON.stringify((data||[]).map(normalizarRegistroLocal).filter(Boolean));
-  // Escritura espejo: si una clave se daña, la otra permite recuperar la cola.
-  localStorage.setItem(DB_KEY,texto);
-  try{localStorage.setItem(DB_BACKUP_KEY,texto)}catch(e){console.warn("Respaldo local:",e)}
-}
-
-function agregarRegistro(reg){
-  const data=datos();
-  data.unshift(normalizarRegistroLocal(reg));
-  guardarDatos(data);
-}
-
-function actualizarRegistro(id,patch){
-  const data=datos();
-  const i=data.findIndex(r=>r.id===id);
-  if(i>=0){
-    data[i]=normalizarRegistroLocal({...data[i],...patch});
-    guardarDatos(data);
-  }
-}
-
-function ultimoRegistro(){return datos().find(r=>!r.eliminado)||null}
-
-function registrosPor(codigo,estacion){
-  return datos()
-    .filter(r=>!r.eliminado&&String(r.codigo).trim()===String(codigo).trim()&&r.estacion===estacion)
-    .sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora)));
-}
-
-function ultimoEvento(codigo,estacion){
-  const regs=registrosPor(codigo,estacion).filter(r=>r.evento&&r.evento!=="SIN EVENTO");
-  return regs.length?String(regs[regs.length-1].evento).toUpperCase():"";
-}
-
-function tieneEvento(codigo,estacion,evento){
-  return registrosPor(codigo,estacion).some(
-    r=>String(r.evento||"").toUpperCase()===String(evento).toUpperCase()
-  );
-}
-
-function ultimoEventoStock(codigo,estacion){
-  const regs=registrosPor(codigo,estacion).filter(r=>{
-    const ev=String(r.evento||"").toUpperCase();
-    return ev==="EN STOCK"||ev==="SALIDA STOCK";
-  });
-  return regs.length?String(regs[regs.length-1].evento).toUpperCase():"";
-}
-
+function guardarDatos(data){const t=JSON.stringify((data||[]).map(normalizarRegistroLocal).filter(Boolean));localStorage.setItem(DB_KEY,t);try{localStorage.setItem(DB_BACKUP_KEY,t)}catch(e){}}
+function agregarRegistro(reg){const d=datos();d.unshift(normalizarRegistroLocal(reg));guardarDatos(d)}
+function actualizarRegistro(id,patch){const d=datos(),i=d.findIndex(r=>String(r.id)===String(id));if(i>=0){d[i]=normalizarRegistroLocal({...d[i],...patch});guardarDatos(d)}}
 function obtenerRegistro(id){return datos().find(r=>String(r.id)===String(id))||null}
-
+function registrosPor(codigo,estacion){return datos().filter(r=>!r.eliminado&&String(r.codigo)===String(codigo)&&r.estacion===estacion).sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora)))}
+function ultimoEvento(codigo,estacion){const x=registrosPor(codigo,estacion);return x.length?String(x[x.length-1].evento||"").toUpperCase():""}
+function tieneEvento(codigo,estacion,evento){return registrosPor(codigo,estacion).some(r=>r.evento===evento)}
 function pendientesSyncOrdenados(){return datos().filter(r=>!r.eliminado&&!r.sincronizado).sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora)))}

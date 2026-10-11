@@ -1,0 +1,53 @@
+KANBAN QR - AUDITORIA COMPLETA VERSION 3.0
+Fecha: 2026-10-11
+
+OBJETIVO
+Consolidar en una sola versión los cambios solicitados, eliminar bloqueos de sincronización y entregar el proyecto web completo con index.html, frontend, service worker, manifest, iconos, backend Apps Script y pruebas.
+
+HALLAZGOS EN LA VERSION PUBLICADA 2.9.10
+1. El frontend seguía mostrando y cacheando 0002.9.10.
+2. Inventario validaba la ubicación antigua SEGMENTO-NUMERO (A-3), incompatible con el formato solicitado NUMERO SEGMENTO (3 A).
+3. La cola de sincronización podía detenerse si un registro de INVENTARIO no era reconocido por la marca de capacidad del backend.
+4. La verificación previa de tiempos_base podía inmovilizar toda la cola antes de intentar transferir registros válidos.
+5. El respaldo era CSV y no XLSX.
+6. Los selectores de Inventario estaban físicamente en orden Segmento | Número.
+7. Muestreo mantenía numeración/segmentos distintos a Inventario.
+
+VERSION 3.0 - CAMBIOS CONSOLIDADOS
+- Version visible, build, cache y backend: 3.0.
+- INVENTARIO: selector izquierdo NUMERO 0..10; selector derecho SEGMENTO A,B,C,4..10.
+- INVENTARIO: recurso guardado y enviado como "3 A".
+- MUESTREO: mismo esquema NUMERO 0..10 + SEGMENTO A,B,C,4..10; formato "3 A".
+- INVENTARIO: lectura manual de 5 dígitos -> PPO#####.
+- INVENTARIO: QR extenso hasta 2048 caracteres; solo PPO##### y los campos operativos viajan a la base.
+- DESCARGUIO/PATIO: 1ra lectura INICIO; 2da lectura guarda FINAL y EN STOCK automáticamente.
+- Pendientes por finalizar: ordenados del registro más reciente al más antiguo.
+- Retención local INVENTARIO: 2 días, solo registros ya sincronizados.
+- Retención otras estaciones: 20 días, solo grupos finalizados y sincronizados.
+- Nunca se purgan registros pendientes por la limpieza automática.
+- Sincronización inmediata tras registrar + revisión periódica cada 5 minutos.
+- Lotes ligeros de 4 registros y división automática de URLs grandes.
+- Fallback individual si save_batch no está disponible.
+- Un registro con error no debe bloquear las otras estaciones.
+- Un registro solo se marca sincronizado cuando el backend confirma su mismo ID.
+- Reintentos automáticos con cola local durable.
+- Señal remota cada 60 s para reintento/actualización de equipos.
+- Respaldo Excel XLSX local con hojas REGISTROS, PENDIENTES y CONTROL.
+- Service worker versión 3.0 con cache nuevo para forzar actualización.
+
+PRUEBAS EJECUTADAS
+- node --check: todos los archivos JS frontend y service-worker: OK.
+- node --check del backend Apps Script (sintaxis): OK.
+- Validación de referencias del index.html: 0 archivos faltantes.
+- Auditoría automatizada de requisitos: 20/20 OK.
+- Integridad del ZIP: verificada antes de entrega.
+
+IMPORTANTE PARA PUBLICAR
+1. Publicar TODO el contenido de esta carpeta en la raíz de GitHub Pages, incluyendo index.html.
+2. Reemplazar el código del Apps Script por backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs.
+3. Implementar una NUEVA VERSIÓN del mismo Web App de Apps Script para conservar la URL actual. Si se crea otro deployment con URL distinta, actualizar ENDPOINT_FIJO en js/config.js.
+4. Luego abrir Administrador > FORZAR REVISIÓN DE VERSIÓN EN TODOS LOS EQUIPOS.
+5. No borrar datos/caché de equipos con pendientes antes de confirmar que llegaron a Google Sheets.
+
+LIMITACION DE VALIDACION
+Las pruebas incluidas verifican lógica, estructura y sintaxis en el paquete. La confirmación final de extremo a extremo contra Google Sheets requiere publicar el Apps Script 3.0 y ejecutar una prueba real desde al menos un equipo, porque el paquete local no puede escribir en el deployment productivo por sí solo.
