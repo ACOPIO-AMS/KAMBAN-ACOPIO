@@ -1,0 +1,46 @@
+/* KANBAN 3.0: corrección responsive, sin tocar datos ni sincronización */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{min-width:0}
+main,.card,.pendientesBox,.ultimoBox,.modalBox,.tableWrap,#tablaLocal,#pendientesTabla,#kanban,#controlDispositivos{min-width:0;max-width:100%}
+main{width:min(100%,1280px);margin:0 auto;padding:8px 10px 96px}
+.card{overflow:hidden}
+.estacionRecursoRow{grid-template-columns:repeat(2,minmax(0,1fr))}
+.estacionRecursoRow>div{min-width:0}
+.campoEspecial{grid-column:1/-1}
+.ubicacionRow{grid-template-columns:repeat(2,minmax(0,1fr))}
+input,select,button{min-width:0;max-width:100%;font-size:16px}
+.topStats{grid-template-columns:repeat(3,minmax(0,1fr));top:0}
+.topStats>div{min-width:0;overflow:hidden;padding:7px 3px}
+.topStats small{font-size:clamp(11px,2.8vw,16px)}
+.topStats b{font-size:clamp(16px,5vw,23px);overflow-wrap:anywhere}
+.tableWrap,#tablaLocal,#pendientesTabla,#kanban,#controlDispositivos{display:block;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+.tableWrap table,#tablaLocal table,#pendientesTabla table,#kanban table,#controlDispositivos table{width:max-content;min-width:100%;max-width:none;table-layout:auto;border-collapse:collapse;white-space:nowrap}
+.tableWrap th,.tableWrap td,#tablaLocal th,#tablaLocal td,#pendientesTabla th,#pendientesTabla td,#kanban th,#kanban td,#controlDispositivos th,#controlDispositivos td{white-space:nowrap;overflow:visible;text-overflow:clip;padding:8px 10px}
+.modoBtns{grid-template-columns:repeat(4,minmax(0,1fr))}
+.modoBtns button{font-size:clamp(10px,2.5vw,14px);padding:6px 3px;white-space:normal;overflow-wrap:anywhere}
+.modal{width:100%;max-width:100vw;overflow-x:hidden}
+.modalBox{width:min(100%,1100px);max-width:100%;overflow:hidden}
+.modalTop{min-width:0}.modalTop h3{min-width:0;overflow-wrap:anywhere}
+.fabTrack,.fabAdmin{width:52px;height:52px;bottom:max(12px,env(safe-area-inset-bottom));font-size:23px;z-index:11}
+.fabTrack{left:12px}.fabAdmin{right:12px}
+@media(max-width:600px){
+ header h1{font-size:clamp(24px,7vw,32px)}
+ header div{font-size:12px}
+ main{padding:7px 7px 92px}
+ .card{padding:9px 7px}
+ .estacionRecursoRow{grid-template-columns:minmax(0,1fr)}
+ .ubicacionRow{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .scanInput{height:76px;font-size:clamp(19px,6vw,29px)}
+ .topStats{position:relative;top:auto}
+ .fabTrack,.fabAdmin{width:48px;height:48px;bottom:max(10px,env(safe-area-inset-bottom))}
+ .pendientesBox,#tablaLocal{max-height:310px}
+}
+@media(min-width:601px) and (max-width:1023px){
+ main{width:100%;padding:12px 14px 96px}
+ .scanInput{height:82px}
+}
+@media(min-width:1024px){
+ main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+ main>.card{margin:0}
+ .fabTrack,.fabAdmin{width:58px;height:58px}
+}

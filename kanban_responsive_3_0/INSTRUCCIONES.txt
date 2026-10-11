@@ -1,0 +1,8 @@
+CORRECCIÓN RESPONSIVE KANBAN 3.0
+1. Suba responsive.css a css/responsive.css en el repositorio.
+2. En index.html, inmediatamente después de la etiqueta que carga css/estilos.css, agregue:
+<link rel="stylesheet" href="css/responsive.css?v=3.0.1-responsive">
+3. En service-worker.js cambie el nombre de CACHE a kamban-acopio-v3.0.1-responsive y agregue './css/responsive.css?v=3.0.1-responsive' a ASSETS. Publique en GitHub Pages.
+4. Pruebe móvil vertical y horizontal, tablet y PC. Las tablas se desplazan horizontalmente sin recortar columnas.
+5. No borrar datos de la app, caché manualmente ni reinstalar con registros pendientes.
+NOTA: Esta corrección solo afecta presentación; no arregla por sí sola la sincronización pendiente.
