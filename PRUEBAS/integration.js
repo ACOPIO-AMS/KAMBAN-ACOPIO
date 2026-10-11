@@ -75,7 +75,7 @@ browser.jsonpSeguro=async params=>{
 const evalBrowser=code=>vm.runInContext(code,browser);
 const record=(id,event,time,resource='C1')=>({id,codigo:'12345',evento:event,fecha_hora:'2026-09-27 '+time,operador:'OPERADOR',estacion:'CHANCADO',recurso:resource,sincronizado:false});
 async function run(){
-  assert.deepEqual(remote({action:'ping'}),{ok:true,sistema:'KANBAN',version:'0002.9.0',revision:'0002.9.10',build:'inventario-tabla-12',tiempos_base:true,inventario:true,sync_remota:true,actualizacion_remota:true,sync_token:'',update_token:''});
+  assert.deepEqual(remote({action:'ping'}),{ok:true,sistema:'KANBAN',version:'0002.9.0',revision:'0002.9.10',build:'inventario-tabla-13',tiempos_base:true,inventario:true,sync_remota:true,actualizacion_remota:true,sync_token:'',update_token:''});
   assert.equal(evalBrowser('endpoint()'),'https://script.google.com/macros/s/AKfycbx_UwdiDhTvcWVAdygIIGh4otJXp22aFHFQ2t5QLJUySxDZBs_lh9ER0la_aA0gX-o/exec');
   assert.equal(evalBrowser('validarSecuencia("12345","CHANCADO","","C1").ok'),false);
   evalBrowser('window.datosRemotos=[{codigo:"12345",fecha:"2026-09-27",estado:"EN PROCESO"}];renderSeguimiento()');
@@ -100,7 +100,12 @@ async function run(){
   assert.equal(respuestaLegada.data[0].result,'YA REGISTRADO');
   const sheet=sheets.get('CHANCADO');
   assert.equal(sheet.getLastRow(),5);
-  assert.deepEqual(sheet.rows[4].slice(8,12),['','00:05:00','00:25:00','']);
+  assert.deepEqual(sheet.rows[4].slice(8,12),['',5,25,'']);
+  assert.equal(evalBrowser('minutosDuracion(600)'),'10');
+  assert.equal(evalBrowser('minutosDuracion(90)'),'1.5');
+  assert.equal(evalBrowser('minutosDuracion(1)'),'0.02');
+  assert.match(element('tablaLocal').innerHTML,/Espera \(min\)/);
+  assert.match(element('tablaLocal').innerHTML,/<td>25<\/td>/);
   const originalGetRange=sheet.getRange.bind(sheet);
   let lecturasFilas=0;
   sheet.getRange=(row,col,numRows,numCols)=>{
@@ -162,7 +167,7 @@ async function run(){
   await evalBrowser('procesarPendientesSync(false)');
   const descargaHoja=sheets.get('DESCARGUIO');
   assert.equal(descargaHoja.getLastRow(),7);
-  assert.deepEqual(descargaHoja.rows[6].slice(8,12),['','00:07:00','00:33:00','']);
+  assert.deepEqual(descargaHoja.rows[6].slice(8,12),['',7,33,'']);
   const muestreoReal=book.insertSheet('MUESTREO');
   muestreoReal.getRange(1,9,1,4).setValues([['ANTIGUO I','ANTIGUO J','ANTIGUO K','ANTIGUO L']]);
   muestreoReal.getRange(2,9,1,4).setValues([['DATO I','DATO J','DATO K','DATO L']]);
@@ -174,8 +179,8 @@ async function run(){
   assert.equal(evalBrowser('pendientesSyncOrdenados().length'),0);
   assert.deepEqual(muestreoReal.rows[0].slice(8,12),['ANTIGUO I','ANTIGUO J','ANTIGUO K','ANTIGUO L']);
   assert.deepEqual(muestreoReal.rows[1].slice(8,12),['DATO I','DATO J','DATO K','DATO L']);
-  assert.deepEqual(muestreoReal.rows[0].slice(12,16),['ESPERA','PARADAS','PROCESO EFECTIVO','PERMANENCIA']);
-  assert.deepEqual(muestreoReal.rows[4].slice(12,16),['00:05:00','00:00:00','00:10:00','00:15:00']);
+  assert.deepEqual(muestreoReal.rows[0].slice(12,16),['ESPERA (min)','PARADAS (min)','PROCESO EFECTIVO (min)','PERMANENCIA (min)']);
+  assert.deepEqual(muestreoReal.rows[4].slice(12,16),[5,0,10,15]);
   assert.equal(server.kaColumnaTiempos(muestreoReal),13);
   browser.item={...record('sin-recurso','RECEPCION','11:30:00',''),codigo:'60000',sync_bloqueado:true,sync_ultimo_error:'Falta RECURSO en 60000.'};
   evalBrowser('agregarRegistro(item)');
@@ -185,7 +190,7 @@ async function run(){
   server.kaHoja('MUESTREO');
   assert.equal(muestreoReal.getLastColumn(),16);
   const muestreo=[{fila:2,valores:['54321','RECEPCION','2026-09-27 09:00:00']},{fila:3,valores:['54321','EN STOCK','2026-09-27 09:10:00']},{fila:4,valores:['54321','SALIDA STOCK','2026-09-27 09:30:00']},{fila:5,valores:['54321','FINAL','2026-09-27 09:50:00']}];
-  assert.deepEqual(JSON.parse(JSON.stringify(server.kaCalcularFilasTiempos(muestreo,'MUESTREO')[0].valores)),['00:30:00','00:00:00','00:20:00','00:50:00']);
+  assert.deepEqual(JSON.parse(JSON.stringify(server.kaCalcularFilasTiempos(muestreo,'MUESTREO')[0].valores)),[30,0,20,50]);
   evalBrowser('iniciar()');
   element('operador').value='OPERADOR';element('tipoMineral').value='LOTE';element('estadoMineral').value='SECO';
   const before=evalBrowser('datos().length');
@@ -208,8 +213,8 @@ async function run(){
   element('registrarInventarioBtn').onclick();
   assert.equal(evalBrowser('datos()[0].codigo'),'PPO68843');
   assert.equal(evalBrowser('datos()[0].recurso'),'A-5');
-  assert.match(read('index.html'),/<select id="inventarioSerie"[^>]*>[\s\S]*?<option value="C">C<\/option><\/select>/);
-  assert.match(read('index.html'),/<select id="inventarioCancha"[^>]*>[\s\S]*?<option value="8">8<\/option><\/select>/);
+  assert.match(read('index.html'),/<select id="inventarioSerie"[^>]*>[\s\S]*?<option value="C">C<\/option>[\s\S]*?<option value="10">10<\/option><\/select>/);
+  assert.match(read('index.html'),/<select id="inventarioCancha"[^>]*>[\s\S]*?<option value="10">10<\/option><\/select>/);
   assert.equal(element('inventarioSerie').value,'A');
   assert.equal(element('inventarioCancha').value,'5');
   assert.match(element('tablaLocal').innerHTML,/<td>68843<\/td>/);
@@ -231,7 +236,7 @@ async function run(){
   element('codigo').value='20Set0627PPO68843101240MINERA68843';element('inventarioSerie').value='D';
   element('registrarInventarioBtn').onclick();
   assert.equal(evalBrowser('datos().length'),cantidadInventario);
-  element('inventarioSerie').value='A';element('inventarioCancha').value='9';
+  element('inventarioSerie').value='A';element('inventarioCancha').value='11';
   element('registrarInventarioBtn').onclick();
   assert.equal(evalBrowser('datos().length'),cantidadInventario);
   element('inventarioCancha').value='5';element('codigo').value='';
@@ -262,20 +267,21 @@ async function run(){
   assert.equal(evalBrowser('obtenerRegistro("inv-legado").lectura_original'),'7May2200PPO64198334530COMPA');
   assert.deepEqual(inventario.rows[1].slice(0,6),['CODIGO','n° LOTE','FECHA Y HORA','RECURSO','OPERARIO','ID REGISTRO']);
   assert.deepEqual(inventario.rows[2].slice(0,6),['ANTERIOR','00001','2026-09-27 08:00:00','B-1','ANA','ID-VIEJO']);
-  assert.deepEqual(inventario.rows[3].slice(0,5),['PPO68843','68843',evalBrowser('datos().find(r=>r.codigo==="PPO68843").fecha_hora'),'A-5','OPERADOR']);
+  assert.deepEqual(inventario.rows.find(r=>r[0]==='PPO68843').slice(0,5),['PPO68843','68843',evalBrowser('datos().find(r=>r.codigo==="PPO68843").fecha_hora'),'A-5','OPERADOR']);
   element('codigo').value='26Ago0914PPO68043373450';element('codigo').listeners.input();
   element('codigo').listeners.keydown({key:'Enter',preventDefault(){}});
   await evalBrowser('procesarPendientesSync(false)');
-  assert.deepEqual(inventario.rows[4].slice(0,5),['PPO64198','64198','2026-10-02 13:00:00','B-2','OPERADOR']);
-  assert.deepEqual(inventario.rows[5].slice(0,5),['PPO68043','68043',evalBrowser('datos().find(r=>r.codigo==="PPO68043").fecha_hora'),'A-5','OPERADOR']);
-  const invId=inventario.rows[3][5];
+  assert.deepEqual(inventario.rows.find(r=>r[0]==='PPO64198').slice(0,5),['PPO64198','64198','2026-10-02 13:00:00','B-2','OPERADOR']);
+  assert.deepEqual(inventario.rows.find(r=>r[0]==='PPO68043').slice(0,5),['PPO68043','68043',evalBrowser('datos().find(r=>r.codigo==="PPO68043").fecha_hora'),'A-5','OPERADOR']);
+  const invIndex=inventario.rows.findIndex(r=>r[0]==='PPO68843');
+  const invId=inventario.rows[invIndex][5];
   evalBrowser('actualizarRegistro('+JSON.stringify(invId)+',{sincronizado:false})');
   await evalBrowser('procesarPendientesSync(false)');
   assert.equal(inventario.getLastRow(),6);
   assert.equal(evalBrowser('obtenerRegistro('+JSON.stringify(invId)+').sincronizado'),true);
   assert.equal(remote({action:'delete',estacion:'INVENTARIO',id:invId}).result,'ELIMINADO');
   assert.deepEqual(inventario.rows[2].slice(0,6),['ANTERIOR','00001','2026-09-27 08:00:00','B-1','ANA','ID-VIEJO']);
-  assert.deepEqual(inventario.rows[3].slice(0,6),['','','','','','']);
+  assert.deepEqual(inventario.rows[invIndex].slice(0,6),['','','','','','']);
   inventario.getRange(2,1).setValues([['OTRO ENCABEZADO']]);
   const errorCabecera=remote({action:'save_batch',lote:Buffer.from(JSON.stringify([{
     codigo:'20Set0627PPO68843101240MINERA68843',evento:'LECTURA',fecha_hora:'2026-09-28 10:00:00',
@@ -316,6 +322,23 @@ async function run(){
   }])).toString('base64url')});
   assert.equal(manualDirecto.data[0].ok,true);
   assert.ok(inventario.rows.some(r=>r[0]==='PPO12345'&&r[1]==='12345'&&r[5]==='ID-MANUAL-DIRECTO'));
+  element('inventarioSerie').value='10';element('inventarioCancha').value='10';element('codigo').value='54321';
+  element('registrarInventarioBtn').onclick();
+  assert.equal(evalBrowser('datos()[0].recurso'),'10-10');
+  await evalBrowser('procesarPendientesSync(false)');
+  assert.ok(inventario.rows.some(r=>r[0]==='PPO54321'&&r[3]==='10-10'));
+  const otraCancha=remote({action:'save_batch',lote:Buffer.from(JSON.stringify([{
+    codigo:'PPO22222',evento:'LECTURA',fecha_hora:'2026-09-28 10:00:00',operador:'ANA',estacion:'INVENTARIO',recurso:'4-1',id:'ID-CANCHA-4'
+  }])).toString('base64url')});
+  assert.equal(otraCancha.data[0].ok,true);
+  assert.ok(inventario.rows.some(r=>r[0]==='PPO22222'&&r[3]==='4-1'));
+  sheet.getRange(5,9,1,4).setValues([['','00:00:01','00:10:00','']]);
+  const migrado=server.CONVERTIR_TIEMPOS_HISTORICOS_A_MINUTOS();
+  const copia=migrado.find(x=>x.estacion==='CHANCADO');
+  assert.equal(copia.celdas,2);
+  assert.equal(sheets.get(copia.respaldo).rows[4][9],'00:00:01');
+  assert.deepEqual(sheet.rows[4].slice(8,12),['',0.02,10,'']);
+  assert.equal(server.CONVERTIR_TIEMPOS_HISTORICOS_A_MINUTOS().length,0);
   // La orden remota sobrevive a dispositivos desconectados y nunca confirma sin ID.
   assert.equal(remote({action:'request_sync',pin:'mal'}).ok,false);
   const orden=remote({action:'request_sync',pin:'1234'});
@@ -344,7 +367,7 @@ async function run(){
   assert.equal(estadoRemoto.sync_token,storage.get('kamban_sync_orden_token_v1'));
   assert.ok(Array.isArray(estadoRemoto.data));
   await evalBrowser('reportarEstadoDispositivo(true)');
-  assert.ok(remote({action:'devices'}).data.some(d=>d.version==='0002.9.10-inventario-manual'));
+  assert.ok(remote({action:'devices'}).data.some(d=>d.version==='0002.9.10-inventario-minutos'));
 
   assert.equal(remote({action:'request_update',pin:'mal'}).ok,false);
   browser.navigator.onLine=false;
@@ -356,7 +379,7 @@ async function run(){
   const tokenUpdate=remote({action:'signal'}).update_token;
   assert.ok(tokenUpdate);
   assert.equal(remote({action:'ping'}).update_token,tokenUpdate);
-  assert.equal(remote({action:'heartbeat',dispositivo_id:'test-disp',frontend_version:'0002.9.10-inventario-manual'}).data.update_token,tokenUpdate);
+  assert.equal(remote({action:'heartbeat',dispositivo_id:'test-disp',frontend_version:'0002.9.10-inventario-minutos'}).data.update_token,tokenUpdate);
   assert.equal(storage.get('kamban_actualizacion_orden_token_v1'),tokenUpdate);
   await evalBrowser('verificarActualizacionRemota()');
   assert.equal(updateChecks,1);
@@ -371,7 +394,7 @@ async function run(){
 
   assert.equal(evalBrowser('recibirSolicitudActualizacion('+JSON.stringify(tokenUpdate)+')'),false);
   assert.match(read('index.html'),/id="solicitarActualizacionEquiposBtn"/);
-  assert.match(read('service-worker.js'),/0002\.9\.10-inventario-manual/);
+  assert.match(read('service-worker.js'),/0002\.9\.10-inventario-minutos/);
   assert.match(read('index.html'),/id="solicitarSyncEquiposBtn"/);
   assert.match(read('index.html'),/id="pendientesDiagnostico"/);
   element('adminModal').classList.remove('hide');

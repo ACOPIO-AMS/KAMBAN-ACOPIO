@@ -8,10 +8,9 @@ function duracionEvento(inicio,fin){
   return inicio!==null&&fin!==null&&fin>=inicio?Math.floor((fin-inicio)/1000):null;
 }
 
-function relojDuracion(segundos){
+function minutosDuracion(segundos){
   if(segundos===null||!Number.isFinite(segundos))return "—";
-  const h=Math.floor(segundos/3600),m=Math.floor(segundos%3600/60),s=segundos%60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  return String(Math.round(segundos/60*100)/100);
 }
 
 function calcularTiemposProceso(registros){

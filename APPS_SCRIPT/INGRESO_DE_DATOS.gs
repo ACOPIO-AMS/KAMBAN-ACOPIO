@@ -10,12 +10,12 @@
 var KA_SPREADSHEET_ID="1Hx4fLIcN2mC-JKlzOUd3Ntm7Wm_pH4njX5uPvBxglz0";
 var KA_VERSION="0002.9.0";
 var KA_REVISION="0002.9.10";
-var KA_BUILD="inventario-tabla-12";
+var KA_BUILD="inventario-tabla-13";
 var KA_SYNC_TOKEN_KEY="KANBAN_SOLICITUD_SYNC";
 var KA_UPDATE_TOKEN_KEY="KANBAN_SOLICITUD_ACTUALIZACION";
 var KA_HOJAS=["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO","CUARTEOSELLADO","ATENCION AL CLIENTE"];
 var KA_INV_COLUMNAS=["CODIGO","N° LOTE","FECHA Y HORA","RECURSO","OPERARIO","ID REGISTRO"];
-var KA_COLUMNAS=["CODIGO","EVENTO","FECHA Y HORA","OPERARIO","ESTACION","RECURSO","ID REGISTRO","DETALLE","ESPERA","PARADAS","PROCESO EFECTIVO","PERMANENCIA"];
+var KA_COLUMNAS=["CODIGO","EVENTO","FECHA Y HORA","OPERARIO","ESTACION","RECURSO","ID REGISTRO","DETALLE","ESPERA (min)","PARADAS (min)","PROCESO EFECTIVO (min)","PERMANENCIA (min)"];
 var KA_CONTROL_HOJA="CONTROL DISPOSITIVOS";
 var KA_CONTROL_COLUMNAS=["ID DISPOSITIVO","EQUIPO","AREA","VERSION APP","ULTIMA CONEXION","PENDIENTES","ULTIMO ERROR","ULTIMA SINCRONIZACION","ESTADO","ORDEN ACTUALIZACION","RESULTADO ACTUALIZACION","ORDEN TRANSFERENCIA","RESULTADO TRANSFERENCIA"];
 
@@ -105,7 +105,7 @@ function kaColumnaTiempos(hoja){
     cab=ultima>=9?hoja.getRange(1,9,1,ultima-8).getDisplayValues()[0]:[];
   for(var inicio=9;inicio<=ultima-3;inicio++){
     var igual=true;
-    for(var j=0;j<4;j++)if(kaTexto(cab[inicio-9+j])!==nombres[j]){igual=false;break;}
+    for(var j=0;j<4;j++)if(kaTexto(cab[inicio-9+j])!==nombres[j]&&kaTexto(cab[inicio-9+j])!==nombres[j].replace(" (min)","")){igual=false;break;}
     if(igual)return inicio;
   }
   // Si ya existe cualquier dato a partir de I, se agregan las métricas al final.
@@ -120,6 +120,7 @@ function kaHoja(estacion){
   if(hoja.getMaxColumns()<inicio+3)hoja.insertColumnsAfter(hoja.getMaxColumns(),inicio+3-hoja.getMaxColumns());
   hoja.getRange(1,1,1,8).setValues([KA_COLUMNAS.slice(0,8)]);
   hoja.getRange(1,inicio,1,4).setValues([KA_COLUMNAS.slice(8)]);
+  if(hoja.getLastRow()>1)hoja.getRange(2,inicio,hoja.getLastRow()-1,4).setNumberFormat("0.##");
   hoja.setFrozenRows(1);
   SpreadsheetApp.flush();
   cache.put(clave,"1",600);
@@ -235,7 +236,7 @@ function kaGuardarLote(lote){
   }finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
 }
 function kaExtraerCodigoInventario(lectura){var re=/PP[O0](\d{5})/g,raw=kaTexto(lectura).toUpperCase(),m,unico="";if(/^\d{5}$/.test(raw))return"PPO"+raw;while((m=re.exec(raw))!==null){var codigo="PPO"+m[1];if(unico&&unico!==codigo)return"";unico=codigo;}return unico;}
-function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1&&e!=="INVENTARIO")throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");if(e==="INVENTARIO"){d.codigo=kaExtraerCodigoInventario(d.codigo);if(!d.codigo)throw new Error("Inventario: lectura sin un único código PPO y cinco dígitos.");if(d.evento!=="LECTURA")throw new Error("Evento de inventario inválido.");if(!/^[A-Za-z0-9]{6,80}$/.test(d.codigo))throw new Error("Código de inventario inválido.");if(!/^[A-Z]{1,3}-[1-9][0-9]?$/.test(d.recurso))throw new Error("Ubicación de cancha inválida.");if(!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(d.fecha_hora))throw new Error("Fecha u hora inválida.");if(!d.operador)throw new Error("Operario vacío.");return d;}return d;}
+function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1&&e!=="INVENTARIO")throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");if(e==="INVENTARIO"){d.codigo=kaExtraerCodigoInventario(d.codigo);if(!d.codigo)throw new Error("Inventario: lectura sin un único código PPO y cinco dígitos.");if(d.evento!=="LECTURA")throw new Error("Evento de inventario inválido.");if(!/^[A-Za-z0-9]{6,80}$/.test(d.codigo))throw new Error("Código de inventario inválido.");if(!/^(?:[ABC]|[4-9]|10)-(?:[1-9]|10)$/.test(d.recurso))throw new Error("Ubicación de cancha inválida.");if(!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(d.fecha_hora))throw new Error("Fecha u hora inválida.");if(!d.operador)throw new Error("Operario vacío.");return d;}return d;}
 function kaRecurso(r){var e=kaEstacion(r.estacion),x=kaTexto(r.recurso).toUpperCase();if(x)return x;if(e==="BALANZA"&&kaTexto(r.tipo_mineral))return kaTexto(r.tipo_mineral).toUpperCase();if(e==="MUESTREO"&&kaTexto(r.ubicacion))return kaTexto(r.ubicacion).toUpperCase();if(e==="DESCARGUIO"&&kaTexto(r.tolva))return"T"+kaTexto(r.tolva).replace(/^T/i,"");if(e==="CHANCADO"&&kaTexto(r.circuito))return"C"+kaTexto(r.circuito).replace(/^C/i,"");if(e==="SECADO"&&kaTexto(r.horno))return"H"+kaTexto(r.horno).replace(/^H/i,"");if(e==="PULVERIZADO"&&kaTexto(r.molino))return"M"+kaTexto(r.molino).replace(/^M/i,"");return"";}
 function kaBuscarFilaRecientePorId(hoja,id,maxFilas){var n=hoja.getLastRow();if(!id||n<2)return-1;var inicio=Math.max(2,n-Math.max(1,Number(maxFilas||1000))+1);var valores=hoja.getRange(inicio,7,n-inicio+1,1).getDisplayValues();for(var i=valores.length-1;i>=0;i--){if(kaTexto(valores[i][0])===id)return inicio+i;}return-1;}
 function kaBuscarFilaPorIdCompleta(hoja,id){var n=hoja.getLastRow();if(!id||n<2)return-1;var f=hoja.getRange(2,7,n-1,1).createTextFinder(id).matchEntireCell(true).findNext();return f?f.getRow():-1;}
@@ -346,8 +347,7 @@ function kaMarcaTiempo(v){
 function kaSegundosEntre(a,b){return a!==null&&b!==null&&b>=a?Math.floor((b-a)/1000):null;}
 function kaDuracionTexto(seg){
   if(seg===null||!isFinite(seg))return"";
-  return [Math.floor(seg/3600),Math.floor(seg%3600/60),seg%60]
-    .map(function(n){return String(n).padStart(2,"0");}).join(":");
+  return Math.round(seg/60*100)/100;
 }
 function kaCalcularFilasTiempos(filas,estacion){
   var eventos=filas.slice().sort(function(a,b){
@@ -400,8 +400,45 @@ function kaActualizarTiemposCodigos(hoja,codigos){
   filas.forEach(function(v,i){var codigo=kaTexto(v[0]);if(Object.prototype.hasOwnProperty.call(porCodigo,codigo))
     porCodigo[codigo].push({fila:desde+i,valores:v.concat(tiempos[i])});});
   codigos.forEach(function(codigo){kaCalcularFilasTiempos(porCodigo[codigo],hoja.getName()).forEach(function(x){
-    if(x.valores.some(function(v,i){return v!==x.actuales[i];}))
-      hoja.getRange(x.fila,inicio,1,4).setValues([x.valores]);
+    if(x.valores.some(function(v,i){return String(v)!==String(x.actuales[i]);}))
+      hoja.getRange(x.fila,inicio,1,4).setNumberFormat("0.##").setValues([x.valores]);
   });
   });
+}
+
+// Ejecución manual única para convertir tiempos históricos guardados como hh:mm:ss.
+// Crea un respaldo de cada hoja afectada y deja intactas las columnas ajenas.
+function CONVERTIR_TIEMPOS_HISTORICOS_A_MINUTOS(){
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000))throw new Error("Base ocupada; reintente la conversión histórica.");
+  try{
+  var libro=kaLibro(),informe=[];
+  KA_HOJAS.forEach(function(estacion){
+    var hoja=libro.getSheetByName(estacion);
+    if(!hoja||hoja.getLastRow()<2)return;
+    var inicio=kaColumnaTiempos(hoja);
+    if(inicio+3>hoja.getLastColumn())return;
+    var cab=hoja.getRange(1,inicio,1,4).getDisplayValues()[0];
+    if(cab.some(function(x,i){return kaTexto(x)!==KA_COLUMNAS[8+i]&&kaTexto(x)!==KA_COLUMNAS[8+i].replace(" (min)","");}))return;
+    var cambios=[],desde=2,total=hoja.getLastRow();
+    while(desde<=total){
+      var n=Math.min(400,total-desde+1),filas=hoja.getRange(desde,inicio,n,4).getDisplayValues();
+      filas.forEach(function(f,i){f.forEach(function(v,j){
+        var m=kaTexto(v).match(/^(\d+):([0-5]\d):([0-5]\d)$/);
+        if(m)cambios.push({fila:desde+i,columna:inicio+j,minutos:kaDuracionTexto((+m[1]*3600)+(+m[2]*60)+(+m[3]))});
+      });});
+      desde+=n;
+    }
+    if(cambios.length){
+      var respaldo=(estacion+"_RESPALDO_MIN_"+Date.now()).slice(0,99);
+      hoja.copyTo(libro).setName(respaldo);
+      cambios.forEach(function(x){hoja.getRange(x.fila,x.columna).setNumberFormat("0.##").setValues([[x.minutos]]);});
+      informe.push({estacion:estacion,celdas:cambios.length,respaldo:respaldo});
+    }
+    hoja.getRange(1,inicio,1,4).setValues([KA_COLUMNAS.slice(8)]);
+    hoja.getRange(2,inicio,total-1,4).setNumberFormat("0.##");
+  });
+  SpreadsheetApp.flush();
+  return informe;
+  }finally{lock.releaseLock();}
 }

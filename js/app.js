@@ -293,8 +293,8 @@ function registrarInventario(){
     $("codigo").focus();return;
   }
   if(!operador){pedirDatoPendiente("Ingrese el operador.",$("operador"));return;}
-  if(!/^[ABC]$/.test(serie)){pedirDatoPendiente("Seleccione la serie de cancha: A, B o C.",$("inventarioSerie"));return;}
-  if(!/^[1-8]$/.test(cancha)){pedirDatoPendiente("Seleccione un número de cancha del 1 al 8.",$("inventarioCancha"));return;}
+  if(!/^(?:[ABC]|[4-9]|10)$/.test(serie)){pedirDatoPendiente("Seleccione la serie de cancha: A, B, C o del 4 al 10.",$("inventarioSerie"));return;}
+  if(!/^(?:[1-9]|10)$/.test(cancha)){pedirDatoPendiente("Seleccione un número de cancha del 1 al 10.",$("inventarioCancha"));return;}
   const lote=codigo.slice(-5);
   const registro={id:uid(),codigo,evento:"LECTURA",fecha_hora:fechaHoraLocal(),operador,
     estacion:"INVENTARIO",recurso:`${serie}-${cancha}`,detalle:lote,lectura_original:lectura,
@@ -515,17 +515,17 @@ function render(){
       <td>${textoTabla(r.operador)}</td>
       <td>${textoTabla(r.estacion)}</td>
       <td>${textoTabla(recursoDetalle(r)||"-")}</td>
-      <td>${t?relojDuracion(t.espera):"—"}</td>
-      <td>${t?relojDuracion(t.parada):"—"}</td>
-      <td>${t?relojDuracion(t.proceso):"—"}</td>
-      <td>${t?relojDuracion(t.permanencia):"—"}</td>
+      <td>${t?minutosDuracion(t.espera):"—"}</td>
+      <td>${t?minutosDuracion(t.parada):"—"}</td>
+      <td>${t?minutosDuracion(t.proceso):"—"}</td>
+      <td>${t?minutosDuracion(t.permanencia):"—"}</td>
       <td><span class="estadoBadge ${clase}">${texto}</span></td>
       <td class="${r.sincronizado?"ok":"bad"}">${r.sincronizado?"OK":"PEND"}</td>
     </tr>`;
   }).join("");
 
   $("tablaLocal").innerHTML=
-    "<table><tr><th>Código</th><th>Evento</th><th>Fecha/Hora</th><th>Operador</th><th>Estación</th><th>Recurso</th><th>Espera</th><th>Paradas</th><th>Proceso</th><th>Permanencia</th><th>Estado</th><th>Sync</th></tr>"+
+    "<table><tr><th>Código</th><th>Evento</th><th>Fecha/Hora</th><th>Operador</th><th>Estación</th><th>Recurso</th><th>Espera (min)</th><th>Paradas (min)</th><th>Proceso (min)</th><th>Permanencia (min)</th><th>Estado</th><th>Sync</th></tr>"+
     filas+
     "</table>";
 

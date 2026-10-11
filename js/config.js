@@ -1,5 +1,5 @@
 const APP_VERSION="0002.9.10";
-const APP_BUILD="0002.9.10-inventario-manual";
+const APP_BUILD="0002.9.10-inventario-minutos";
 const DB_KEY="kamban_acopio_db_v0001";
 const DB_BACKUP_KEY="kamban_acopio_db_respaldo_v0001";
 const LAST_SYNC_KEY="kamban_ultima_sync_v0001";

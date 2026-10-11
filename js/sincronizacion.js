@@ -156,7 +156,7 @@ function validarPayload(p){
   if(p.estacion==="INVENTARIO"){
     if(p.evento!=="LECTURA")throw new Error("Evento de inventario inválido.");
     if(!/^PPO\d{5}$/.test(p.codigo))throw new Error("Inventario: ingrese 5 dígitos o una lectura con un único código PPO.");
-    if(!/^[A-Z]{1,3}-[1-9][0-9]?$/.test(p.recurso))throw new Error("Ubicación de inventario inválida.");
+    if(!/^(?:[ABC]|[4-9]|10)-(?:[1-9]|10)$/.test(p.recurso))throw new Error("Ubicación de inventario inválida.");
     if(!p.operador)throw new Error("Falta operario en inventario.");
     return;
   }
