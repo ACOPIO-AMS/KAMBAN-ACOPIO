@@ -17,3 +17,5 @@ INSTALACIÓN:
 
 ADVERTENCIA: No borrar datos/caché del navegador en ningún equipo con pendientes.
 No se ha validado una transferencia real contra la hoja de producción.
+
+R5: Inventario usa PPO 35335 (espacio) en pantalla, cola de sincronización y Google Sheets. Acepta registros anteriores PPO35335 y QR largos, normalizándolos al enviar. Sin otros cambios funcionales.

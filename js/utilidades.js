@@ -8,8 +8,8 @@ function setEstado(t){const e=$("estadoEntrada");if(e)e.textContent=t||""}
 function beepOk(){try{navigator.vibrate&&navigator.vibrate(35)}catch(e){}}
 function extraerCodigoInventario(lectura){
  const texto=String(lectura||"").trim().toUpperCase();
- if(/^\d{5}$/.test(texto))return "PPO"+texto;
- const codigos=[...texto.matchAll(/PP[O0](\d{5})/g)].map(x=>"PPO"+x[1]);
+ if(/^\d{5}$/.test(texto))return "PPO "+texto;
+ const codigos=[...texto.matchAll(/PP[O0]\s*(\d{5})(?!\d)/g)].map(x=>"PPO "+x[1]);
  const unicos=[...new Set(codigos)]; return unicos.length===1?unicos[0]:"";
 }
 function normalizarUbicacion(v){
