@@ -17,7 +17,7 @@ async function procesarPendientesSync(manual=false){
  if(syncProcesando)return;if(!navigator.onLine||!endpoint()){if(manual)alert("Sin conexión o sin endpoint. Los datos siguen guardados localmente.");return}
  syncProcesando=true;let enviados=0,errores=0;syncUltimoError="";
  try{
-   await verificarBackend();
+   // Evitar ping adicional: el primer save_batch prueba la conexión.
    const intentados=new Set();
    while(navigator.onLine){
     const regs=pendientesSyncOrdenados().filter(r=>!syncEnCurso.has(r.id)&&!intentados.has(r.id)).slice(0,SYNC_BATCH_SIZE);if(!regs.length)break;

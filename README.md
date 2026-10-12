@@ -1,32 +1,21 @@
-# KANBAN QR 3.0 — paquete limpio
+# KANBAN QR 3.0 — sincronización ligera r3
 
-Este paquete contiene solo los archivos necesarios para producción y un único backend de Apps Script.
+## IMPORTANTE: proteger registros pendientes
+No eliminar caché, datos del navegador ni reinstalar la PWA. El repositorio GitHub no contiene los pendientes; cada equipo los conserva localmente.
 
-## GitHub Pages
-Suba a la raíz del repositorio: `index.html`, `manifest.json`, `service-worker.js` y las carpetas `css`, `icons`, `js`, `backend`.
+## Publicación
+1. Cargar **el contenido** de este directorio a la raíz de GitHub Pages (index.html en la raíz).
+2. En el proyecto de Google Apps Script conectado a la hoja, sustituir el código antiguo por el archivo completo `backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs`. **No copiar el .gs a GitHub esperando que se ejecute: GitHub solo lo almacena.**
+3. Guardar e implementar una **nueva versión de la implementación existente**. Conservar URL /exec y acceso necesario para todos los equipos.
+4. Verificar `.../exec?action=ping` y que responda build `v3.0-sync-ligero-r3`.
+5. Probar un registro nuevo y después reintentar los pendientes de cada dispositivo. Comprobar los IDs en Sheets.
 
-No cambie la URL del Apps Script en `js/config.js`. Se conservó el mismo endpoint y las mismas claves de almacenamiento local para no perder los registros pendientes existentes en los equipos.
+## Cambios de esta revisión
+- Quita la escritura masiva de formatos de columnas del camino crítico de guardado.
+- El cálculo de tiempos se difiere a `RECALCULAR_TIEMPOS_MANUAL()` para que no frene las colas de varios usuarios. **Esto implica que los indicadores I:L NO se actualizan automáticamente durante el guardado**; ejecutar manualmente fuera de las horas de mayor carga o implementar un trigger periódico de baja frecuencia una vez verificada la transferencia.
+- `CONFIGURAR_FORMATO_TIEMPOS()` aplica el formato numérico en minutos por separado.
+- Una estación con error no impide responder por ID sobre las otras estaciones del mismo lote.
+- Se elimina el ping extra antes de cada envío.
 
-## Google Apps Script
-El archivo que debe quedar como backend es:
-
-`backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs`
-
-En el proyecto de Apps Script elimine o desactive las copias antiguas que definan `doGet` o `doPost`, deje una sola implementación de estas funciones y pegue el contenido completo del archivo anterior. Después: Guardar > Implementar > Administrar implementaciones > Editar > Nueva versión > Implementar. Mantenga la misma implementación/URL `/exec`.
-
-## Reglas corregidas
-- Los tiempos calculados nunca bloquean el guardado ni la confirmación por ID.
-- Permanencia = FINAL - RECEPCIÓN; si no existe RECEPCIÓN, FINAL - INICIO.
-- Espera = INICIO - RECEPCIÓN cuando ambos eventos existen.
-- Paradas = suma de (REINICIO - PARADA). Si no hubo parada, queda vacío.
-- Proceso efectivo = (FINAL - INICIO) - total de paradas.
-- Los tiempos se guardan como números en minutos.
-- DESCARGUIO + PATIO: segunda lectura normal genera FINAL y EN STOCK como dos registros independientes.
-- Se mantiene lote de sincronización de 4 registros y confirmación individual por ID.
-- No borre caché, datos del navegador ni desinstale la PWA mientras existan pendientes.
-
-## Verificación posterior
-1. Abra la URL `/exec?action=ping` del Apps Script. Debe responder `ok:true`, `version:"3.0"` y `build:"v3.0-sync-tiempos-r2"`.
-2. Abra GitHub Pages en un equipo con conexión y espere la actualización.
-3. En Administrador use `PROBAR SINCRONIZACIÓN EN TODOS LOS EQUIPOS`.
-4. Verifique que los pendientes disminuyan y que los IDs aparezcan en Google Sheets.
+## Limitaciones
+No se ha probado contra la implementación de Apps Script y la hoja de producción: el comportamiento final requiere validar la implementación desplegada, permisos, límites y IDs confirmados. Mantener un respaldo del backend actual antes de sustituirlo.

@@ -10,7 +10,7 @@
 var KA_SPREADSHEET_ID="1Hx4fLIcN2mC-JKlzOUd3Ntm7Wm_pH4njX5uPvBxglz0";
 var KA_VERSION="3.0";
 var KA_REVISION="3.0";
-var KA_BUILD="v3.0-sync-tiempos-r2";
+var KA_BUILD="v3.0-sync-ligero-r3";
 var KA_SYNC_TOKEN_KEY="KANBAN_SOLICITUD_SYNC";
 var KA_UPDATE_TOKEN_KEY="KANBAN_SOLICITUD_ACTUALIZACION";
 var KA_HOJAS=["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO","CUARTEOSELLADO","ATENCION AL CLIENTE"];
@@ -121,7 +121,8 @@ function kaHoja(estacion){
   hoja.getRange(1,1,1,8).setValues([KA_COLUMNAS.slice(0,8)]);
   hoja.getRange(1,inicio,1,4).setValues([KA_COLUMNAS.slice(8)]);
   // El formato evita que Excel y Sheets muestren las duraciones como horas.
-  if(hoja.getMaxRows()>1)hoja.getRange(2,inicio,hoja.getMaxRows()-1,4).setNumberFormat("0.##");
+  // No aplicar formato a miles de filas durante la sincronización.
+  // Ejecutar CONFIGURAR_FORMATO_TIEMPOS() una sola vez si se necesita.
   hoja.setFrozenRows(1);
   // flush final ocurre en kaGuardar / kaGuardarLote bajo el mismo lock.
   cache.put(clave,"1",600);
@@ -168,13 +169,13 @@ function kaGuardar(registro){
     }
     if(fila>0){
       var recursoExistente=kaTexto(hoja.getRange(fila,6).getDisplayValue());
-      kaActualizarTiemposSeguro(hoja,[d.codigo]);
+      // Cálculo diferido: nunca condiciona la confirmación del ID.
       cache.put(cacheKey,"1",21600);
       return{result:"YA REGISTRADO",data:{id:d.id,recurso:recursoExistente}};
     }
     var nueva=Math.max(2,hoja.getLastRow()+1);
     hoja.getRange(nueva,1,1,8).setValues([[d.codigo,d.evento,d.fecha_hora,d.operador,d.estacion,d.recurso,d.id,d.detalle]]);
-    kaActualizarTiemposSeguro(hoja,[d.codigo]);
+    // Cálculo diferido: nunca condiciona la confirmación del ID.
     cache.put(cacheKey,"1",21600);
     return{result:"OK",data:{id:d.id,recurso:d.recurso}};
   }finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
@@ -192,6 +193,7 @@ function kaGuardarLote(lote){
   if(!lock.tryLock(4000))throw new Error("Base ocupada. El lote será reintentado.");
   try{
     Object.keys(grupos).forEach(function(estacion){
+      try {
       if(estacion==="INVENTARIO"){kaGuardarInventarioGrupo(grupos[estacion],resultados);return;}
       var h=kaHoja(estacion),n=h.getLastRow(),existentes=Object.create(null);
       if(n>=2){
@@ -221,13 +223,18 @@ function kaGuardarLote(lote){
       }
       var codigos=Object.create(null);
       grupos[estacion].forEach(function(item){codigos[item.dato.codigo]=true;});
-      kaActualizarTiemposSeguro(h,Object.keys(codigos));
+      // Cálculo diferido: no se ejecuta dentro del bloqueo de escritura.
       yaRegistrados.forEach(function(x){
         resultados[x.item.indice]={ok:true,id:x.item.dato.id,recurso:x.recurso,result:"YA REGISTRADO"};
       });
       nuevos.forEach(function(item){
         resultados[item.indice]={ok:true,id:item.dato.id,recurso:item.dato.recurso,result:"OK"};
       });
+      } catch(errorEstacion) {
+        grupos[estacion].forEach(function(item){
+          if(!resultados[item.indice])resultados[item.indice]={ok:false,id:item.dato.id,error:kaError(errorEstacion)};
+        });
+      }
     });
     return resultados;
   }catch(error){
@@ -550,4 +557,32 @@ function PRUEBA_TIEMPOS_V3_0_CORREGIDO(){
     {fila:8,valores:["99999","FINAL","2026-10-11 11:00:00","","CHANCADO","","7","","","","",""]}
   ];
   return kaCalcularFilasTiempos(filas,"CHANCADO");
+}
+
+/** Ejecutar manualmente desde Apps Script, fuera de horas de producción. */
+function CONFIGURAR_FORMATO_TIEMPOS(){
+  var libro=kaLibro(),salida=[];
+  KA_HOJAS.forEach(function(nombre){
+    var h=libro.getSheetByName(nombre);if(!h)return;
+    try{var inicio=kaColumnaTiempos(h);var n=Math.max(0,h.getLastRow()-1);
+      if(n)h.getRange(2,inicio,n,4).setNumberFormat("0.##");
+      salida.push({estacion:nombre,filas:n,ok:true});
+    }catch(e){salida.push({estacion:nombre,ok:false,error:kaError(e)});}
+  });
+  return salida;
+}
+/** Recalcula tiempos aparte de la recepción. No usar como trigger de cada registro. */
+function RECALCULAR_TIEMPOS_MANUAL(){
+  var libro=kaLibro(),salida=[];
+  KA_HOJAS.forEach(function(nombre){
+    var h=libro.getSheetByName(nombre);if(!h||h.getLastRow()<2)return;
+    try{var n=h.getLastRow(),desde=Math.max(2,n-1999),val=h.getRange(desde,1,n-desde+1,1).getDisplayValues();
+      var codigos=Object.create(null);val.forEach(function(r){if(kaTexto(r[0]))codigos[kaTexto(r[0])]=true;});
+      var lista=Object.keys(codigos);
+      // Procesamiento manual por estación; los fallos no afectan al guardado.
+      kaActualizarTiemposCodigos(h,lista);
+      salida.push({estacion:nombre,codigos:lista.length,ok:true});
+    }catch(e){salida.push({estacion:nombre,ok:false,error:kaError(e)});}
+  });
+  return salida;
 }
