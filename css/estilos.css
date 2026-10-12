@@ -22,3 +22,6 @@
   main{max-width:1400px;margin:0 auto}
   .estacionRecursoRow{grid-template-columns:minmax(260px,.9fr) minmax(320px,1.1fr)}
 }
+
+/* BALANZA: tipo y estado a la derecha de Estación, apilados */
+#balanzaMineralBox{grid-column:2;min-width:0}#balanzaMineralBox .ubicacionRow{grid-template-columns:minmax(0,1fr)}#balanzaMineralBox select{width:100%}

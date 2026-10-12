@@ -1,9 +1,14 @@
-KANBAN QR 3.0 - R7
-Envío local inmediato (~100ms), sin bloqueo por recursos opcionales al retransmitir.
-Backend INVENTARIO acepta encabezados existentes. Se conserva protección por ID.
-Sin cambios en cálculos de tiempos, recursos, turnos, PATIO, interfaz ni almacenamiento local.
-ATENCIÓN: restricciones reales de Google Sheets (protecciones, celdas combinadas, validaciones)
-pueden impedir la escritura y deben revisarse. No se confirma OK sin escritura.
-Actualizar el backend mediante NUEVA VERSIÓN de la MISMA implementación Apps Script.
-No borrar datos locales, caché ni desinstalar aplicaciones con pendientes.
-No hay prueba end-to-end contra Google Sheets en producción.
+KANBAN QR 3.0 - R9 MOTIVO DE STOCK
+
+Basado en el paquete R8, sin cambios en backend ni sincronización.
+En DESCARGUÍO se muestra MOTIVO DE STOCK cuando el recurso es PATIO o se activa EN STOCK.
+Opciones: LOTE HÚMEDO, ESPERANDO PROVEEDOR, CIRCUITO OCUPADO, CLIMA.
+El motivo es obligatorio para esos casos y se envía en DETALLE (columna H).
+En PATIO, al registrar FINAL, se genera también EN STOCK con ID propio y el mismo motivo.
+Tras cada registro se limpian recurso y motivo; estación y operario permanecen.
+INVENTARIO conserva su ubicación fija. No se cambió el backend.
+
+Subir el contenido de este ZIP a la raíz del repositorio GitHub.
+No borrar almacenamiento del navegador ni pendientes de los equipos.
+
+PRUEBAS: sintaxis JS y estructura ZIP verificadas. No se ha probado escritura real en Google Sheets.
