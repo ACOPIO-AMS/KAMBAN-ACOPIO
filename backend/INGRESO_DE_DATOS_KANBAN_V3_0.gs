@@ -10,7 +10,7 @@
 var KA_SPREADSHEET_ID="1Hx4fLIcN2mC-JKlzOUd3Ntm7Wm_pH4njX5uPvBxglz0";
 var KA_VERSION="3.0";
 var KA_REVISION="3.0";
-var KA_BUILD="v3.0-sync-ligero-r3";
+var KA_BUILD="v3.0-recursos-tiempos-auto-r4";
 var KA_SYNC_TOKEN_KEY="KANBAN_SOLICITUD_SYNC";
 var KA_UPDATE_TOKEN_KEY="KANBAN_SOLICITUD_ACTUALIZACION";
 var KA_HOJAS=["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO","CUARTEOSELLADO","ATENCION AL CLIENTE"];
@@ -571,18 +571,32 @@ function CONFIGURAR_FORMATO_TIEMPOS(){
   });
   return salida;
 }
-/** Recalcula tiempos aparte de la recepción. No usar como trigger de cada registro. */
-function RECALCULAR_TIEMPOS_MANUAL(){
-  var libro=kaLibro(),salida=[];
-  KA_HOJAS.forEach(function(nombre){
-    var h=libro.getSheetByName(nombre);if(!h||h.getLastRow()<2)return;
-    try{var n=h.getLastRow(),desde=Math.max(2,n-1999),val=h.getRange(desde,1,n-desde+1,1).getDisplayValues();
-      var codigos=Object.create(null);val.forEach(function(r){if(kaTexto(r[0]))codigos[kaTexto(r[0])]=true;});
-      var lista=Object.keys(codigos);
-      // Procesamiento manual por estación; los fallos no afectan al guardado.
-      kaActualizarTiemposCodigos(h,lista);
-      salida.push({estacion:nombre,codigos:lista.length,ok:true});
-    }catch(e){salida.push({estacion:nombre,ok:false,error:kaError(e)});}
-  });
-  return salida;
+/** Recalcula automáticamente los tiempos fuera del bloqueo de escritura. */
+function RECALCULAR_TIEMPOS_AUTOMATICO(){
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(1000))return [{estado:"OCUPADO",reintentar:true}];
+  try{
+    var libro=kaLibro(),salida=[];
+    KA_HOJAS.forEach(function(nombre){
+      var h=libro.getSheetByName(nombre);if(!h||h.getLastRow()<2)return;
+      try{
+        var n=h.getLastRow(),desde=Math.max(2,n-1999),val=h.getRange(desde,1,n-desde+1,1).getDisplayValues();
+        var codigos=Object.create(null);
+        val.forEach(function(r){if(kaTexto(r[0]))codigos[kaTexto(r[0])]=true;});
+        kaActualizarTiemposCodigos(h,Object.keys(codigos));
+        salida.push({estacion:nombre,codigos:Object.keys(codigos).length,ok:true});
+      }catch(e){salida.push({estacion:nombre,ok:false,error:kaError(e)});}
+    });
+    return salida;
+  }finally{lock.releaseLock();}
 }
+/** Ejecutar UNA vez al instalar para activar cálculo automático cada minuto. */
+function INSTALAR_CALCULO_AUTOMATICO(){
+  ScriptApp.getProjectTriggers().forEach(function(t){
+    if(t.getHandlerFunction()==="RECALCULAR_TIEMPOS_AUTOMATICO")ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("RECALCULAR_TIEMPOS_AUTOMATICO").timeBased().everyMinutes(1).create();
+  return "Activado: cálculo automático de espera, paradas, proceso y permanencia cada minuto.";
+}
+/** Alias para recálculo inmediato cuando el administrador lo requiera. */
+function RECALCULAR_TIEMPOS_MANUAL(){return RECALCULAR_TIEMPOS_AUTOMATICO();}

@@ -1,21 +1,19 @@
-# KANBAN QR 3.0 — sincronización ligera r3
+KANBAN QR 3.0 - R4 (ajuste acotado)
 
-## IMPORTANTE: proteger registros pendientes
-No eliminar caché, datos del navegador ni reinstalar la PWA. El repositorio GitHub no contiene los pendientes; cada equipo los conserva localmente.
+Se conserva la sincronización ligera R3, endpoint, IDs y claves locales.
 
-## Publicación
-1. Cargar **el contenido** de este directorio a la raíz de GitHub Pages (index.html en la raíz).
-2. En el proyecto de Google Apps Script conectado a la hoja, sustituir el código antiguo por el archivo completo `backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs`. **No copiar el .gs a GitHub esperando que se ejecute: GitHub solo lo almacena.**
-3. Guardar e implementar una **nueva versión de la implementación existente**. Conservar URL /exec y acceso necesario para todos los equipos.
-4. Verificar `.../exec?action=ping` y que responda build `v3.0-sync-ligero-r3`.
-5. Probar un registro nuevo y después reintentar los pendientes de cada dispositivo. Comprobar los IDs en Sheets.
+CAMBIOS:
+- Limpieza de recurso/tolva/circuito/horno/molino/ubicación tras registro exitoso local.
+- Estación y operario permanecen durante el turno 07:00-18:59 / 19:00-06:59; se reinician al cambiar de turno.
+- Indicadores ESPERA, PARADAS, PROCESO y PERMANENCIA en minutos. PARADAS vacío sin eventos de parada.
+- Recalculo automático por disparador de Apps Script cada minuto, sin bloquear la escritura de los móviles.
 
-## Cambios de esta revisión
-- Quita la escritura masiva de formatos de columnas del camino crítico de guardado.
-- El cálculo de tiempos se difiere a `RECALCULAR_TIEMPOS_MANUAL()` para que no frene las colas de varios usuarios. **Esto implica que los indicadores I:L NO se actualizan automáticamente durante el guardado**; ejecutar manualmente fuera de las horas de mayor carga o implementar un trigger periódico de baja frecuencia una vez verificada la transferencia.
-- `CONFIGURAR_FORMATO_TIEMPOS()` aplica el formato numérico en minutos por separado.
-- Una estación con error no impide responder por ID sobre las otras estaciones del mismo lote.
-- Se elimina el ping extra antes de cada envío.
+INSTALACIÓN:
+1. Sustituir archivos de GitHub por el contenido de este ZIP, manteniendo index.html en raíz.
+2. Reemplazar el código del proyecto Apps Script por backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs.
+3. Desde el editor de Apps Script, ejecutar UNA VEZ INSTALAR_CALCULO_AUTOMATICO() y conceder permisos.
+4. Administrar implementaciones > Editar > Nueva versión > Implementar. Mantener la misma URL /exec.
+5. Verificar ping build v3.0-recursos-tiempos-auto-r4 y comprobar un ID en Sheets.
 
-## Limitaciones
-No se ha probado contra la implementación de Apps Script y la hoja de producción: el comportamiento final requiere validar la implementación desplegada, permisos, límites y IDs confirmados. Mantener un respaldo del backend actual antes de sustituirlo.
+ADVERTENCIA: No borrar datos/caché del navegador en ningún equipo con pendientes.
+No se ha validado una transferencia real contra la hoja de producción.
