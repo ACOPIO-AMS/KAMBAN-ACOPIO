@@ -1,14 +1,13 @@
-KANBAN QR 3.0 - R9 MOTIVO DE STOCK
+KANBAN QR 3.0 R12 — Motivo de stock en RECURSO
 
-Basado en el paquete R8, sin cambios en backend ni sincronización.
-En DESCARGUÍO se muestra MOTIVO DE STOCK cuando el recurso es PATIO o se activa EN STOCK.
-Opciones: LOTE HÚMEDO, ESPERANDO PROVEEDOR, CIRCUITO OCUPADO, CLIMA.
-El motivo es obligatorio para esos casos y se envía en DETALLE (columna H).
-En PATIO, al registrar FINAL, se genera también EN STOCK con ID propio y el mismo motivo.
-Tras cada registro se limpian recurso y motivo; estación y operario permanecen.
-INVENTARIO conserva su ubicación fija. No se cambió el backend.
-
-Subir el contenido de este ZIP a la raíz del repositorio GitHub.
-No borrar almacenamiento del navegador ni pendientes de los equipos.
-
-PRUEBAS: sintaxis JS y estructura ZIP verificadas. No se ha probado escritura real en Google Sheets.
+DESCARGUIO: PATIO + LOTE HÚMEDO se registra en la columna F como PATIO - LOTE HÚMEDO.
+INICIO: solicita motivo solo una vez cuando el recurso es PATIO.
+FINAL: hereda el recurso completo de INICIO; si PATIO genera EN STOCK con ID independiente.
+EN STOCK automático: hereda recurso completo sin pedir motivo.
+EN STOCK manual: solicita motivo solamente si no existe motivo previo; con otra tolva registra T1 - CIRCUITO OCUPADO, por ejemplo.
+DETALLE: conserva el motivo por compatibilidad con los registros existentes.
+RECEPCION: no exige recurso. INVENTARIO: ubicación persistente.
+No se modificó backend ni claves de almacenamiento, ni se alteraron cálculos.
+LIMITACIÓN: el INICIO debe estar registrado localmente en el mismo equipo para heredar recurso/motivo.
+Los registros históricos no se reescriben.
+Instalación: reemplazar los archivos de GitHub con los del ZIP; conservar datos locales.
