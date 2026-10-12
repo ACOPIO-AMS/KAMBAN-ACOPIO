@@ -2,9 +2,22 @@ let syncProcesando=false,syncTimer=null,syncUltimoError="",syncEnCurso=new Set()
 function dispositivoId(){let id=localStorage.getItem(DEVICE_ID_KEY);if(!id){id="DISP-"+uid();localStorage.setItem(DEVICE_ID_KEY,id)}return id}
 function nombreDispositivo(){return String(localStorage.getItem(DEVICE_NAME_KEY)||"EQUIPO SIN NOMBRE").trim()}
 function jsonpSeguro(params,timeout=SYNC_REQUEST_TIMEOUT_MS){return new Promise((resolve,reject)=>{const cb="kcb_"+Date.now()+"_"+Math.random().toString(36).slice(2),s=document.createElement("script");let done=false;const limpiar=()=>{if(done)return;done=true;clearTimeout(t);try{delete window[cb]}catch(e){};s.remove()};const t=setTimeout(()=>{limpiar();reject(new Error("Apps Script no respondió a tiempo."))},timeout);window[cb]=r=>{limpiar();resolve(r)};s.onerror=()=>{limpiar();reject(new Error("No se pudo conectar con Apps Script."))};const q=new URLSearchParams({...params,callback:cb,_:Date.now()});s.src=endpoint()+"?"+q.toString();document.head.appendChild(s)})}
-function crearPayload(r){return{action:"save",frontend_version:APP_VERSION,codigo:r.estacion==="INVENTARIO"?(extraerCodigoInventario(r.codigo)||r.codigo):String(r.codigo||""),evento:String(r.evento||"").toUpperCase(),fecha_hora:String(r.fecha_hora||""),operador:String(r.operador||""),estacion:String(r.estacion||"").toUpperCase(),recurso:r.estacion==="INVENTARIO"?normalizarUbicacion(r.recurso):String(r.recurso||"").toUpperCase(),detalle:String(r.detalle||"").toUpperCase(),id:String(r.id||"")}}
+function tiemposEnviables(){
+ const mapa=new Map();
+ // Se toman exactamente los tiempos ya calculados para la tabla local.
+ calcularTiemposProceso(datos()).forEach(t=>mapa.set(String(t.finId),t));
+ return mapa;
+}
+function valorMinutosEnvio(segundos){
+ if(segundos===null||segundos===undefined||!Number.isFinite(segundos))return "";
+ return Math.round(segundos/60*100)/100;
+}
+function crearPayload(r,tiempos){
+ const t=tiempos&&tiempos.get(String(r.id));
+ return{action:"save",frontend_version:APP_VERSION,codigo:r.estacion==="INVENTARIO"?(extraerCodigoInventario(r.codigo)||r.codigo):String(r.codigo||""),evento:String(r.evento||"").toUpperCase(),fecha_hora:String(r.fecha_hora||""),operador:String(r.operador||""),estacion:String(r.estacion||"").toUpperCase(),recurso:r.estacion==="INVENTARIO"?normalizarUbicacion(r.recurso):String(r.recurso||"").toUpperCase(),detalle:String(r.detalle||"").toUpperCase(),id:String(r.id||""),espera:t?valorMinutosEnvio(t.espera):"",paradas:t&&t.tuvoParada?valorMinutosEnvio(t.parada):"",proceso:t?valorMinutosEnvio(t.proceso):"",permanencia:t?valorMinutosEnvio(t.permanencia):""};
+}
 function validarPayload(p){if(!p.id)throw new Error("Registro sin ID");if(!p.estacion)throw new Error("Registro sin estación")}
-function codificarLote(ps){const filas=ps.map(p=>[p.codigo,p.evento,p.fecha_hora,p.operador,p.estacion,p.recurso,p.detalle,p.id]);return btoa(unescape(encodeURIComponent(JSON.stringify(filas)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
+function codificarLote(ps){const filas=ps.map(p=>[p.codigo,p.evento,p.fecha_hora,p.operador,p.estacion,p.recurso,p.detalle,p.id,p.espera,p.paradas,p.proceso,p.permanencia]);return btoa(unescape(encodeURIComponent(JSON.stringify(filas)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
 async function enviarIndividual(p){const r=await jsonpSeguro(p);if(!r||r.ok!==true)throw new Error(r&&r.error||"Servidor rechazó el registro");const id=String((r.data&&r.data.id)||r.id||"");if(id!==p.id)throw new Error("ID no confirmado por servidor");return{ok:true,id:p.id,recurso:String((r.data&&r.data.recurso)||r.recurso||"").toUpperCase()}}
 async function enviarLote(payloads){
  const lote=codificarLote(payloads);if(lote.length>1300&&payloads.length>1){const m=Math.ceil(payloads.length/2);return (await enviarLote(payloads.slice(0,m))).concat(await enviarLote(payloads.slice(m)))}
@@ -21,7 +34,7 @@ async function procesarPendientesSync(manual=false){
    const intentados=new Set();
    while(navigator.onLine){
     const regs=pendientesSyncOrdenados().filter(r=>!syncEnCurso.has(r.id)&&!intentados.has(r.id)).slice(0,SYNC_BATCH_SIZE);if(!regs.length)break;
-    const ps=[];for(const r of regs){intentados.add(r.id);try{const p=crearPayload(r);validarPayload(p);ps.push(p)}catch(e){actualizarRegistro(r.id,{sync_ultimo_error:String(e.message||e),sync_intentos:Number(r.sync_intentos||0)+1});errores++}}
+    const ps=[],tiempos=tiemposEnviables();for(const r of regs){intentados.add(r.id);try{const p=crearPayload(r,tiempos);validarPayload(p);ps.push(p)}catch(e){actualizarRegistro(r.id,{sync_ultimo_error:String(e.message||e),sync_intentos:Number(r.sync_intentos||0)+1});errores++}}
     if(!ps.length)continue;ps.forEach(p=>syncEnCurso.add(p.id));
     try{const resp=await enviarLote(ps),map=new Map((resp||[]).map(x=>[String(x.id||""),x]));for(const p of ps){const x=map.get(p.id);if(x&&x.ok===true){actualizarRegistro(p.id,{sincronizado:true,sync_ultimo_error:"",sync_ultima_fecha:fechaHoraLocal(),recurso:p.recurso,codigo:p.codigo});enviados++}else{const a=obtenerRegistro(p.id);actualizarRegistro(p.id,{sincronizado:false,sync_intentos:Number(a&&a.sync_intentos||0)+1,sync_ultimo_error:String(x&&x.error||"Servidor no confirmó el ID"),sync_ultima_fecha:fechaHoraLocal()});errores++}}if(enviados)localStorage.setItem(LAST_SYNC_KEY,fechaHoraLocal())}
     catch(e){syncUltimoError=String(e.message||e);ps.forEach(p=>{const a=obtenerRegistro(p.id);actualizarRegistro(p.id,{sync_intentos:Number(a&&a.sync_intentos||0)+1,sync_ultimo_error:syncUltimoError,sync_ultima_fecha:fechaHoraLocal()})});programarReintento();break}

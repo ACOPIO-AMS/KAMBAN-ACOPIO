@@ -1,12 +1,13 @@
-KANBAN QR 3.0 - R13 RECURSOS Y TIEMPOS
+KANBAN QR 3.0 R14 — SOLO TRANSFERENCIA DE TIEMPOS
 
-MUESTREO: al registrar RECEPCION no se solicita recurso; en INICIO se solicita ubicación N° + cancha/segmento. Se limpia tras INICIO. FINAL recupera recurso de INICIO local.
-SECADO: al registrar RECEPCION no se solicita recurso; en INICIO se solicita HORNO H1-H10. Se limpia tras INICIO. FINAL recupera recurso de INICIO local.
-PULVERIZADO: al registrar RECEPCION no se solicita recurso; en INICIO se solicita MOLINO M1-M10. Se limpia tras INICIO. FINAL recupera recurso de INICIO local.
-INVENTARIO: ubicación permanece fija hasta que usuario cambie.
-TIEMPOS: Espera=INICIO-RECEPCION; Paradas=suma(REINICIO-PARADA) (vacío si no hubo); Proceso=FINAL-INICIO-Paradas; Permanencia=FINAL-RECEPCION, o FINAL-INICIO si no hubo recepción. Números en minutos.
-La tabla local incluye las cuatro métricas.
-GOOGLE SHEETS: backend contiene RECALCULAR_TIEMPOS_AUTOMATICO y su instalador INSTALAR_CALCULO_AUTOMATICO. Ejecutar una vez el instalador desde Apps Script, autorizar permisos y publicar una nueva versión de la MISMA implementación para mantener la sincronización. El recálculo es cada minuto, no instantáneo. El cálculo no bloquea el guardado.
-No se han modificado la sincronización, el ID, los endpoints ni las claves locales.
-LIMITACION: recurso heredado de INICIO solo puede recuperarse localmente en el mismo equipo.
-No borrar almacenamiento local con registros pendientes. No se ha verificado producción.
+Se conserva la versión R13 de recursos, eventos, diseño y cálculos locales.
+El frontend envía junto a cada registro 4 tiempos en minutos: espera, paradas, proceso y permanencia.
+El backend escribe directamente los valores recibidos en columnas I:L de la estación.
+No se recalcula nada en Apps Script durante la transferencia.
+PARADAS sin dato se envía y escribe vacío. No se obliga a tener tiempos para enviar.
+Los registros con estado OK ya enviados no se reenvían ni se modifican.
+El cálculo existente del frontend solo produce métricas en el evento FINAL.
+INSTALACION: reemplazar contenido del ZIP en GitHub y actualizar la MISMA implementación de Apps Script con backend/INGRESO_DE_DATOS_KANBAN_V3_0.gs.
+No ejecutar INSTALAR_CALCULO_AUTOMATICO(). Si existe un activador anterior RECALCULAR_TIEMPOS_AUTOMATICO, desactivarlo manualmente para cumplir 'sin recálculo'.
+No borrar almacenamiento local ni registros pendientes.
+PRUEBAS: sintaxis y contrato de datos; no se probó escritura contra la hoja real.

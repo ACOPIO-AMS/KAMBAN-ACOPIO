@@ -10,7 +10,7 @@
 var KA_SPREADSHEET_ID="1Hx4fLIcN2mC-JKlzOUd3Ntm7Wm_pH4njX5uPvBxglz0";
 var KA_VERSION="3.0";
 var KA_REVISION="3.0";
-var KA_BUILD="v3.0-recursos-tiempos-r13";
+var KA_BUILD="v3.0-transferencia-tiempos-r14";
 var KA_SYNC_TOKEN_KEY="KANBAN_SOLICITUD_SYNC";
 var KA_UPDATE_TOKEN_KEY="KANBAN_SOLICITUD_ACTUALIZACION";
 var KA_HOJAS=["BALANZA","DESCARGUIO","CHANCADO","MUESTREO","SECADO","PULVERIZADO","CUARTEOSELLADO","ATENCION AL CLIENTE"];
@@ -22,8 +22,8 @@ var KA_CONTROL_COLUMNAS=["ID DISPOSITIVO","EQUIPO","AREA","VERSION APP","ULTIMA 
 function doGet(e){var cb="";try{var p=e&&e.parameter?e.parameter:{};cb=kaTexto(p.callback);var a=kaTexto(p.action||"ping").toLowerCase();if(a==="ping")return kaSalida({ok:true,sistema:"KANBAN",version:KA_VERSION,revision:KA_REVISION,build:KA_BUILD,tiempos_base:true,inventario:true,sync_remota:true,actualizacion_remota:true,sync_token:kaTokenSync(),update_token:kaTokenActualizacion()},cb);if(a==="signal")return kaSalida({ok:true,version:KA_VERSION,sync_token:kaTokenSync(),update_token:kaTokenActualizacion()},cb);if(a==="heartbeat"){var hb=kaRegistrarDispositivo(p);return kaSalida({ok:true,version:KA_VERSION,data:hb},cb);}if(a==="devices")return kaSalida({ok:true,version:KA_VERSION,data:kaListarDispositivos(),sync_token:kaTokenSync(),update_token:kaTokenActualizacion()},cb);if(a==="request_update")return kaSalida({ok:true,version:KA_VERSION,data:kaSolicitarActualizacion(p)},cb);if(a==="request_sync")return kaSalida({ok:true,version:KA_VERSION,data:kaSolicitarSync(p)},cb);if(a==="save_batch")return kaSalida({ok:true,version:KA_VERSION,data:kaGuardarLote(kaDecodificarLote(p.lote))},cb);if(a==="delete"){var x=kaEliminar(p);return kaSalida({ok:true,version:KA_VERSION,result:x.result,id:x.id},cb);}if(a==="save"){var s=kaGuardar(kaParametrosARegistro(p));return kaSalida({ok:true,version:KA_VERSION,result:s.result,id:s.data.id,recurso:s.data.recurso,data:s.data},cb);}if(a==="kanban"){var k=kaListarKanban();return kaSalida({ok:true,version:KA_VERSION,data:k.data,meta:k.meta},cb);}
 if(a==="list")return kaSalida({ok:true,version:KA_VERSION,data:kaListar()},cb);return kaSalida({ok:false,version:KA_VERSION,error:"Acción no reconocida: "+a},cb);}catch(error){return kaSalida({ok:false,version:KA_VERSION,error:kaError(error)},cb);}}
 function doPost(e){try{if(!e||!e.postData||!e.postData.contents)throw new Error("POST sin contenido.");var s=kaGuardar(JSON.parse(e.postData.contents));return kaSalida({ok:true,version:KA_VERSION,result:s.result,id:s.data.id,recurso:s.data.recurso,data:s.data},"");}catch(error){return kaSalida({ok:false,version:KA_VERSION,error:kaError(error)},"");}}
-function kaParametrosARegistro(p){return {codigo:p.codigo,evento:p.evento,fecha_hora:p.fecha_hora,operador:p.operador,estacion:p.estacion,recurso:p.recurso,detalle:p.detalle,tipo_mineral:p.tipo_mineral,ubicacion:p.ubicacion,id:p.id,eliminado:kaTexto(p.eliminado).toLowerCase()==="true",tolva:p.tolva,circuito:p.circuito,horno:p.horno,molino:p.molino};}
-function kaDecodificarLote(texto){var t=kaTexto(texto);if(!t)throw new Error("Lote vacío.");var json=Utilities.newBlob(Utilities.base64DecodeWebSafe(t)).getDataAsString("UTF-8"),lote=JSON.parse(json);if(!Array.isArray(lote)||!lote.length)throw new Error("Lote inválido.");if(lote.length>10)throw new Error("Lote excede el máximo permitido.");return lote.map(function(r){if(!Array.isArray(r))return r;if(r.length!==8)throw new Error("Registro compacto inválido.");return{codigo:r[0],evento:r[1],fecha_hora:r[2],operador:r[3],estacion:r[4],recurso:r[5],detalle:r[6],id:r[7]};});}
+function kaParametrosARegistro(p){return {codigo:p.codigo,evento:p.evento,fecha_hora:p.fecha_hora,operador:p.operador,estacion:p.estacion,recurso:p.recurso,detalle:p.detalle,tipo_mineral:p.tipo_mineral,ubicacion:p.ubicacion,id:p.id,espera:p.espera,paradas:p.paradas,proceso:p.proceso,permanencia:p.permanencia,eliminado:kaTexto(p.eliminado).toLowerCase()==="true",tolva:p.tolva,circuito:p.circuito,horno:p.horno,molino:p.molino};}
+function kaDecodificarLote(texto){var t=kaTexto(texto);if(!t)throw new Error("Lote vacío.");var json=Utilities.newBlob(Utilities.base64DecodeWebSafe(t)).getDataAsString("UTF-8"),lote=JSON.parse(json);if(!Array.isArray(lote)||!lote.length)throw new Error("Lote inválido.");if(lote.length>10)throw new Error("Lote excede el máximo permitido.");return lote.map(function(r){if(!Array.isArray(r))return r;if(r.length!==8&&r.length!==12)throw new Error("Registro compacto inválido.");return{codigo:r[0],evento:r[1],fecha_hora:r[2],operador:r[3],estacion:r[4],recurso:r[5],detalle:r[6],id:r[7],espera:r.length===12?r[8]:"",paradas:r.length===12?r[9]:"",proceso:r.length===12?r[10]:"",permanencia:r.length===12?r[11]:""};});}
 function kaLibro(){return SpreadsheetApp.openById(KA_SPREADSHEET_ID)}
 function kaTablaInventario(){
   var libro=kaLibro(),hoja=libro.getSheetByName("INVENTARIO");
@@ -112,17 +112,7 @@ function kaRevisarInventarioPPO(aplicar){
 }
 function REVISAR_INVENTARIO_PPO(){return kaRevisarInventarioPPO(false);}
 function CORREGIR_INVENTARIO_PPO(){return kaRevisarInventarioPPO(true);}
-function kaColumnaTiempos(hoja){
-  var ultima=Math.max(8,hoja.getLastColumn()),nombres=KA_COLUMNAS.slice(8),
-    cab=ultima>=9?hoja.getRange(1,9,1,ultima-8).getDisplayValues()[0]:[];
-  for(var inicio=9;inicio<=ultima-3;inicio++){
-    var igual=true;
-    for(var j=0;j<4;j++)if(kaTexto(cab[inicio-9+j])!==nombres[j]){igual=false;break;}
-    if(igual)return inicio;
-  }
-  // Si ya existe cualquier dato a partir de I, se agregan las métricas al final.
-  return ultima<=8?9:ultima+1;
-}
+function kaColumnaTiempos(hoja){return 9;}
 function kaHoja(estacion){
   var libro=kaLibro(),hoja=libro.getSheetByName(estacion);
   if(!hoja)hoja=libro.insertSheet(estacion);
@@ -186,7 +176,7 @@ function kaGuardar(registro){
       return{result:"YA REGISTRADO",data:{id:d.id,recurso:recursoExistente}};
     }
     var nueva=Math.max(2,hoja.getLastRow()+1);
-    hoja.getRange(nueva,1,1,8).setValues([[d.codigo,d.evento,d.fecha_hora,d.operador,d.estacion,d.recurso,d.id,d.detalle]]);
+    hoja.getRange(nueva,1,1,12).setValues([[d.codigo,d.evento,d.fecha_hora,d.operador,d.estacion,d.recurso,d.id,d.detalle,d.espera,d.paradas,d.proceso,d.permanencia]]);
     // Cálculo diferido: nunca condiciona la confirmación del ID.
     cache.put(cacheKey,"1",21600);
     return{result:"OK",data:{id:d.id,recurso:d.recurso}};
@@ -229,9 +219,9 @@ function kaGuardarLote(lote){
       });
       if(nuevos.length){
         var fila=Math.max(2,h.getLastRow()+1),valores=nuevos.map(function(item){
-          var d=item.dato;return[d.codigo,d.evento,d.fecha_hora,d.operador,d.estacion,d.recurso,d.id,d.detalle];
+          var d=item.dato;return[d.codigo,d.evento,d.fecha_hora,d.operador,d.estacion,d.recurso,d.id,d.detalle,d.espera,d.paradas,d.proceso,d.permanencia];
         });
-        h.getRange(fila,1,valores.length,8).setValues(valores);
+        h.getRange(fila,1,valores.length,12).setValues(valores);
       }
       var codigos=Object.create(null);
       grupos[estacion].forEach(function(item){codigos[item.dato.codigo]=true;});
@@ -266,7 +256,12 @@ function kaExtraerCodigoInventario(lectura){
   return unico;
 }
 function kaNormalizarUbicacionInventario_(v){var t=kaTexto(v).toUpperCase(),m=t.match(/^(A|B|C|[4-9]|10)[ -](0|[1-9]|10)$/);return m?m[2]+" "+m[1]:t;}
-function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1&&e!=="INVENTARIO")throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");if(e==="INVENTARIO"){var codigoPPO=kaExtraerCodigoInventario(d.codigo);if(codigoPPO)d.codigo=codigoPPO;return d;}return d;}
+function kaMinutosRecibidos(v){
+ if(v===null||v===undefined||v==="")return "";
+ var n=typeof v==="number"?v:Number(String(v).trim());
+ return isFinite(n)&&n>=0?n:"";
+}
+function kaNormalizarRegistro(r){if(!r||typeof r!=="object")throw new Error("Registro inválido.");var e=kaEstacion(r.estacion);if(KA_HOJAS.indexOf(e)===-1&&e!=="INVENTARIO")throw new Error("Estación inválida: "+e);var d={codigo:kaTexto(r.codigo),evento:kaTexto(r.evento).toUpperCase(),fecha_hora:kaTexto(r.fecha_hora||r.fechaHora),operador:kaTexto(r.operador),estacion:e,recurso:kaRecurso(r),detalle:kaTexto(r.detalle),id:kaTexto(r.id||r.id_registro),espera:kaMinutosRecibidos(r.espera),paradas:kaMinutosRecibidos(r.paradas),proceso:kaMinutosRecibidos(r.proceso),permanencia:kaMinutosRecibidos(r.permanencia),eliminado:r.eliminado===true};if(!d.codigo)throw new Error("Código vacío.");if(!d.id)throw new Error("ID vacío.");if(e==="INVENTARIO"){var codigoPPO=kaExtraerCodigoInventario(d.codigo);if(codigoPPO)d.codigo=codigoPPO;return d;}return d;}
 function kaRecurso(r){var e=kaEstacion(r.estacion),x=kaTexto(r.recurso).toUpperCase();if(x)return x;if(e==="BALANZA"&&kaTexto(r.tipo_mineral))return kaTexto(r.tipo_mineral).toUpperCase();if(e==="MUESTREO"&&kaTexto(r.ubicacion))return kaTexto(r.ubicacion).toUpperCase();if(e==="DESCARGUIO"&&kaTexto(r.tolva))return"T"+kaTexto(r.tolva).replace(/^T/i,"");if(e==="CHANCADO"&&kaTexto(r.circuito))return"C"+kaTexto(r.circuito).replace(/^C/i,"");if(e==="SECADO"&&kaTexto(r.horno))return"H"+kaTexto(r.horno).replace(/^H/i,"");if(e==="PULVERIZADO"&&kaTexto(r.molino))return"M"+kaTexto(r.molino).replace(/^M/i,"");return"";}
 function kaBuscarFilaRecientePorId(hoja,id,maxFilas){var n=hoja.getLastRow();if(!id||n<2)return-1;var inicio=Math.max(2,n-Math.max(1,Number(maxFilas||1000))+1);var valores=hoja.getRange(inicio,7,n-inicio+1,1).getDisplayValues();for(var i=valores.length-1;i>=0;i--){if(kaTexto(valores[i][0])===id)return inicio+i;}return-1;}
 function kaBuscarFilaPorIdCompleta(hoja,id){var n=hoja.getLastRow();if(!id||n<2)return-1;var f=hoja.getRange(2,7,n-1,1).createTextFinder(id).matchEntireCell(true).findNext();return f?f.getRow():-1;}
