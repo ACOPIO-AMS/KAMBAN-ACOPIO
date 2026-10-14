@@ -19,6 +19,22 @@ function validarSecuencia(codigo,estacion,evento,recurso){
  return{ok:true};
 }
 function pendientesPorFinalizar(){
- const grupos={};datos().filter(r=>!r.eliminado&&r.estacion!=="INVENTARIO").forEach(r=>{const k=r.estacion+"||"+r.codigo;if(!grupos[k])grupos[k]={codigo:r.codigo,estacion:r.estacion,recurso:"",eventos:{},ultimo:""};const g=grupos[k];g.eventos[r.evento]=true;if(!g.ultimo||r.fecha_hora>g.ultimo){g.ultimo=r.fecha_hora;g.recurso=r.recurso||g.recurso}});
- return Object.values(grupos).filter(g=>!g.eventos.FINAL).map(g=>({...g,falta:reglasEstacion(g.estacion).filter(e=>!g.eventos[e]).join(" / ")})).sort((a,b)=>String(b.ultimo).localeCompare(String(a.ultimo)));
+ const grupos={};
+ datos().filter(r=>!r.eliminado&&r.estacion!=="INVENTARIO").forEach(r=>{
+  const k=r.estacion+"||"+r.codigo;
+  if(!grupos[k])grupos[k]={codigo:r.codigo,estacion:r.estacion,recurso:"",eventos:{},ultimo:"",movimientosStock:[]};
+  const g=grupos[k];
+  g.eventos[r.evento]=true;
+  if(r.evento==="EN STOCK"||r.evento==="SALIDA STOCK")g.movimientosStock.push(r);
+  if(!g.ultimo||r.fecha_hora>g.ultimo){g.ultimo=r.fecha_hora;g.recurso=r.recurso||g.recurso}
+ });
+ return Object.values(grupos).map(g=>{
+  // Un lote en stock permanece pendiente aunque tenga FINAL.
+  // Solo desaparece del panel cuando su último movimiento es SALIDA STOCK.
+  const ultimoStock=g.movimientosStock.sort((a,b)=>String(a.fecha_hora).localeCompare(String(b.fecha_hora))).at(-1);
+  const enStock=!!ultimoStock&&ultimoStock.evento==="EN STOCK";
+  if(enStock)return {...g,falta:"SALIDA STOCK"};
+  if(g.eventos.FINAL||ultimoStock&&ultimoStock.evento==="SALIDA STOCK")return null;
+  return {...g,falta:reglasEstacion(g.estacion).filter(e=>!g.eventos[e]).join(" / ")};
+ }).filter(Boolean).sort((a,b)=>String(b.ultimo).localeCompare(String(a.ultimo)));
 }
