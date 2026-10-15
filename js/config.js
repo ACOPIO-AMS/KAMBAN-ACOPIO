@@ -1,5 +1,5 @@
 const APP_VERSION="3.0";
-const APP_BUILD="3.0-stock-pendientes-r15";
+const APP_BUILD="3.0-turno-estacion-r16";
 const DB_KEY="kamban_acopio_db_v0001";
 const DB_BACKUP_KEY="kamban_acopio_db_respaldo_v0001";
 const LAST_SYNC_KEY="kamban_ultima_sync_v0001";
