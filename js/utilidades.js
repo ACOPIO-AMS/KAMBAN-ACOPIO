@@ -17,4 +17,4 @@ function normalizarUbicacion(v){
  const viejo=t.match(/^(A|B|C|[4-9]|10)[ -](0|[1-9]|10)$/);
  return viejo?`${viejo[2]} ${viejo[1]}`:t.replace(/-/g," ").replace(/\s+/g," ");
 }
-function esUbicacionValida(v){return /^(?:0|[1-9]|10) (?:A|B|C|[4-9]|10)$/.test(normalizarUbicacion(v))}
+function esUbicacionValida(v){return v==="POR ENTREGAR"||/^(?:0|[1-9]|10) (?:A|B|C|[4-9]|10)$/.test(normalizarUbicacion(v))}

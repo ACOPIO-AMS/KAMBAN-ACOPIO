@@ -1,7 +1,5 @@
-KANBAN QR 3.0 R16 — Cambio de turno
+KANBAN QR 3.0 R17 — SOLO INVENTARIO
 
-Único ajuste funcional: a las 07:00 y 19:00 se conserva solamente la estación seleccionada. Se limpian operador, código, recurso, motivo, tipo/estado de mineral, número y cancha de inventario, ubicación de muestreo y modo especial. Se eliminan las preferencias de inventario del almacenamiento local, sin eliminar registros.
+Se agregó POR ENTREGAR a Ubicación de cancha. Al seleccionarlo, no exige número, y registra exactamente POR ENTREGAR en RECURSO. La selección se conserva hasta cambiarla, salvo la limpieza ya existente al cambio de turno. Las ubicaciones normales no cambian.
 
-No se modifican cálculos, envío de tiempos, sincronización, eventos, backend ni reglas de stock.
-
-Subir los archivos del ZIP a GitHub. No requiere actualización de Apps Script. No borrar datos locales de los dispositivos.
+No se modificaron otras estaciones, cálculos, sincronización ni Apps Script. Subir el contenido a la raíz de GitHub. No borrar datos locales de equipos.
