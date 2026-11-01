@@ -7,10 +7,18 @@ function textoTabla(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"
 function setEstado(t){const e=$("estadoEntrada");if(e)e.textContent=t||""}
 function beepOk(){try{navigator.vibrate&&navigator.vibrate(35)}catch(e){}}
 function extraerCodigoInventario(lectura){
- const texto=String(lectura||"").trim().toUpperCase();
- if(/^\d{5}$/.test(texto))return "PPO "+texto;
- const codigos=[...texto.matchAll(/PP[O0]\s*(\d{5})(?!\d)/g)].map(x=>"PPO "+x[1]);
- const unicos=[...new Set(codigos)]; return unicos.length===1?unicos[0]:"";
+ // Procesar exclusivamente la primera línea; nunca leer los campos posteriores.
+ const primeraLinea=String(lectura??"").split(/\r\n|\n|\r/)[0].trim().toUpperCase();
+ if(!primeraLinea)return "";
+ // Formato Lote: PPO-70319 / LoteÑ PPO'70320 (incluye caracteres alterados del QR).
+ let m=primeraLinea.match(/^LOTE\s*[^A-Z0-9\r\n]*\s*(?:PPO|PP0)\s*[^A-Z0-9\r\n]*\s*([0-9]{5})(?![0-9])/);
+ if(m)return "PPO "+m[1];
+ // Formato antiguo: fecha | hora | PPO 69767 | otros datos.
+ m=primeraLinea.match(/(?:^|[|\]\[;])\s*(?:PPO|PP0)\s*[-'’\s]*([0-9]{5})(?![0-9])(?=\s*(?:$|[|\]\[;]))/);
+ if(m)return "PPO "+m[1];
+ // Lecturas simples anteriores.
+ m=primeraLinea.match(/^(?:(?:PPO|PP0)\s*[-'’:]?\s*)?([0-9]{5})$/);
+ return m?"PPO "+m[1]:"";
 }
 function normalizarUbicacion(v){
  const t=String(v||"").trim().toUpperCase();
