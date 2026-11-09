@@ -64,7 +64,10 @@ function actualizarVisibilidadRecurso(){
  const e=$("estacion").value, codigo=$("codigo").value.trim();
  const evento=e==="INVENTARIO"?"LECTURA":(modoEspecial!=="NORMAL"?modoEspecial:(/^\d{5}$/.test(codigo)?eventoAutomatico(codigo,e):reglasEstacion(e)[0]));
  const pedir=evento==="INICIO";
- $("recursoBox").classList.toggle("hide",!(pedir&&["DESCARGUIO","CHANCADO","SECADO","PULVERIZADO"].includes(e)));
+ $("recursoBox").classList.toggle("hide",!(
+  ["SECADO","PULVERIZADO"].includes(e) ||
+  (pedir && ["DESCARGUIO","CHANCADO"].includes(e))
+));
  $("balanzaMineralBox").classList.toggle("hide",!(e==="BALANZA"&&pedir));
  $("ubicacionMuestreoBox").classList.toggle("hide",!(e==="MUESTREO"&&pedir));
  const origen=registroOrigenProceso(codigo,e);
